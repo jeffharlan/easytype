@@ -1,0 +1,40 @@
+capture_mode = "toggle"            # "toggle" | "hold"
+max_recording_duration = 60        # seconds — auto-stop safety backstop
+
+[hotkey]
+# Record. Raw evdev keycodes for reliability; comment explains them.
+keys = [29, 57]                    # Ctrl+Space  (29=KEY_LEFTCTRL, 57=KEY_SPACE)
+description = "Ctrl+Space"
+
+[hotkey.cancel]
+keys = [1]                         # Esc — only intercepted while recording/transcribing
+description = "Esc"
+
+[hotkey.repaste]
+keys = [66]                        # F8 — re-inject last transcript
+description = "F8"
+
+[audio]
+device = ""                        # "" = default mic
+
+[transcription]
+model = "base.en"
+language = "en"
+device = "auto"                    # auto | cuda | cpu
+
+[injection]
+method = "type"                    # "type" | "paste"
+
+[formatter]
+enabled = false
+backend = "ollama"                 # "ollama" | "openai"
+ollama_model = "llama3.1"
+ollama_url = "http://localhost:11434"
+
+[indicator]
+enabled = true
+position = "top-right"             # top-right | top-center | bottom-right | bottom-left | top-left
+count = "up"                       # "up" | "down"
+
+[keyboard]
+device = ""                        # "" = auto-detect keyboard device(s)
