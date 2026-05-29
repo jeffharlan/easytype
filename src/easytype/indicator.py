@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import threading
+import subprocess
+import sys
 
 from easytype.config import Config
 
@@ -30,72 +31,79 @@ class NullIndicator:
     def stop(self) -> None: ...
 
 
-class TkIndicator:
+class ProcessIndicator:
+    """Shows the timer pill in a separate process so Tk always runs on its own
+    main thread — avoids Tcl cross-thread teardown crashes."""
+
     is_null = False
 
     def __init__(self, position: str, count: str):
         self._position = position
         self._count = count
-        self._thread: threading.Thread | None = None
-        self._stop = threading.Event()
-        self._cap = 0
+        self._proc = None
 
     def start(self, cap: int) -> None:
-        self._cap = cap
-        self._stop.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
+        self._proc = subprocess.Popen(
+            [sys.executable, "-m", "easytype.indicator", self._position, self._count, str(cap)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
 
     def stop(self) -> None:
-        self._stop.set()
-        if self._thread:
-            self._thread.join(timeout=1)
-            self._thread = None
-
-    def _geometry(self, root, w: int, h: int) -> str:
-        sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
-        m = 24
-        pos = {
-            "top-right": (sw - w - m, m), "top-left": (m, m),
-            "top-center": ((sw - w) // 2, m),
-            "bottom-right": (sw - w - m, sh - h - m * 2),
-            "bottom-left": (m, sh - h - m * 2),
-        }.get(self._position, (sw - w - m, m))
-        return f"{w}x{h}+{pos[0]}+{pos[1]}"
-
-    def _run(self) -> None:
-        import tkinter as tk
-
-        root = tk.Tk()
-        root.overrideredirect(True)          # borderless, no titlebar
-        root.attributes("-topmost", True)
-        try:
-            root.wm_attributes("-type", "splash")  # never take focus / taskbar (X11)
-        except tk.TclError:
-            pass
-        root.geometry(self._geometry(root, 150, 44))
-        label = tk.Label(root, font=("sans", 14, "bold"), fg="white", bg="#111111", padx=12, pady=8)
-        label.pack(fill="both", expand=True)
-
-        elapsed = {"s": 0}
-
-        def tick():
-            if self._stop.is_set():
-                root.destroy()
-                return
-            s = elapsed["s"]
-            shown = s if self._count == "up" else max(0, self._cap - s)
-            warn = should_warn(s, self._cap)
-            label.config(text=f"● REC  {format_elapsed(shown)}",
-                         fg=("#ffb000" if warn else "white"))
-            elapsed["s"] += 1
-            root.after(1000, tick)
-
-        tick()
-        root.mainloop()
+        if self._proc is not None:
+            self._proc.terminate()
+            self._proc = None
 
 
 def create_indicator(config: Config):
     if not config.indicator_enabled or not _tk_available():
         return NullIndicator()
-    return TkIndicator(config.indicator_position, config.indicator_count)
+    return ProcessIndicator(config.indicator_position, config.indicator_count)
+
+
+def _run_pill(position: str, count: str, cap: int) -> None:
+    import tkinter as tk
+
+    root = tk.Tk()
+    root.overrideredirect(True)
+    root.attributes("-topmost", True)
+    try:
+        root.wm_attributes("-type", "splash")  # no focus / no taskbar (X11)
+    except tk.TclError:
+        pass
+
+    w, h, margin = 150, 44, 24
+    sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+    x, y = {
+        "top-right": (sw - w - margin, margin),
+        "top-left": (margin, margin),
+        "top-center": ((sw - w) // 2, margin),
+        "bottom-right": (sw - w - margin, sh - h - margin * 2),
+        "bottom-left": (margin, sh - h - margin * 2),
+    }.get(position, (sw - w - margin, margin))
+    root.geometry(f"{w}x{h}+{x}+{y}")
+
+    label = tk.Label(root, font=("sans", 14, "bold"), fg="white", bg="#111111", padx=12, pady=8)
+    label.pack(fill="both", expand=True)
+
+    state = {"s": 0}
+
+    def tick():
+        s = state["s"]
+        if cap and s > cap:
+            root.destroy()
+            return
+        shown = s if count == "up" else max(0, cap - s)
+        label.config(text=f"● REC  {format_elapsed(shown)}",
+                     fg=("#ffb000" if should_warn(s, cap) else "white"))
+        state["s"] += 1
+        root.after(1000, tick)
+
+    tick()
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    _pos = sys.argv[1] if len(sys.argv) > 1 else "top-right"
+    _cnt = sys.argv[2] if len(sys.argv) > 2 else "up"
+    _cap = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+    _run_pill(_pos, _cnt, _cap)
