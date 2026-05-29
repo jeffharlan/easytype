@@ -70,3 +70,17 @@ def test_repeat_of_swallowed_trigger_is_swallowed():
     eng.feed(KEY_SPACE, 1, enabled)
     out = eng.feed(KEY_SPACE, 2, enabled)  # autorepeat
     assert out.swallow is True and out.pressed is None
+
+
+def test_right_ctrl_also_fires_ctrl_space():
+    eng = make_engine()
+    enabled = {"record", "cancel", "repaste"}
+    eng.feed(KEY_RIGHTCTRL, 1, enabled)        # right ctrl down (forwarded)
+    o = eng.feed(KEY_SPACE, 1, enabled)        # space down with right ctrl held
+    assert o.swallow is True and o.pressed == "record"
+
+
+def test_modifier_key_itself_is_forwarded():
+    eng = make_engine()
+    enabled = {"record", "cancel", "repaste"}
+    assert eng.feed(KEY_RIGHTCTRL, 1, enabled).swallow is False
