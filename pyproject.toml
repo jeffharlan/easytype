@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "easytype"
+version = "0.1.0"
+description = "System-wide local voice dictation for Linux (push-to-talk and toggle)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "sounddevice>=0.4",
+    "faster-whisper>=1.0",
+    "evdev>=1.6",
+    "numpy>=1.24",
+    "tomlkit>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+easytype = "easytype.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
