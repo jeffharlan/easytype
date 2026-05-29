@@ -5,13 +5,36 @@ import time
 
 CLIP = ["xclip", "-selection", "clipboard"]
 
+# Terminals paste with Ctrl+Shift+V, not Ctrl+V. Detected by window class.
+TERMINAL_CLASSES = frozenset({
+    "konsole", "alacritty", "kitty", "st", "foot", "urxvt", "rxvt",
+    "tilix", "wezterm", "contour", "ghostty", "hyper", "yakuake",
+    "guake", "sakura", "terminator", "xterm", "deepin-terminal",
+})
+
 
 def type_command(text: str, delay_ms: int) -> list[str]:
     return ["xdotool", "type", "--clearmodifiers", "--delay", str(delay_ms), "--", text]
 
 
-def paste_key_command() -> list[str]:
-    return ["xdotool", "key", "--clearmodifiers", "ctrl+v"]
+def paste_key_command(shift: bool = False) -> list[str]:
+    combo = "ctrl+shift+v" if shift else "ctrl+v"
+    return ["xdotool", "key", "--clearmodifiers", combo]
+
+
+def _active_window_class() -> str:
+    try:
+        r = subprocess.run(
+            ["xdotool", "getactivewindow", "getwindowclassname"],
+            capture_output=True, text=True, timeout=1,
+        )
+        return r.stdout.strip().lower() if r.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
+def is_terminal(window_class: str) -> bool:
+    return "term" in window_class or window_class in TERMINAL_CLASSES
 
 
 class X11Injector:
@@ -29,7 +52,8 @@ class X11Injector:
     def _paste(self, text: str) -> None:
         saved = self._read_clipboard()
         subprocess.run(CLIP, input=text.encode(), check=True)
-        subprocess.run(paste_key_command(), check=True)
+        shift = is_terminal(_active_window_class())
+        subprocess.run(paste_key_command(shift), check=True)
         time.sleep(0.1)  # let the target app consume the paste before we restore
         if saved is not None:
             subprocess.run(CLIP, input=saved, check=False)
