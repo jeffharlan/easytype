@@ -14,6 +14,7 @@ def test_load_creates_default_when_missing(tmp_path: Path):
     assert c.cancel.keys == (1,)
     assert c.repaste.keys == (66,)
     assert c.injection_method == "type"
+    assert c.type_delay_ms == 40
     assert c.formatter_enabled is False
     assert c.indicator_position == "top-right"
     assert c.indicator_count == "up"

@@ -112,7 +112,7 @@ def cmd_run(passive: bool) -> int:
         config=config,
         recorder=Recorder(config.audio_device),
         transcriber=Transcriber(config.model, config.language, config.transcribe_device),
-        injector=get_injector(session),
+        injector=get_injector(session, config.type_delay_ms),
         indicator=create_indicator(config),
         notify=_notify,
         synchronous=False,

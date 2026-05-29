@@ -34,6 +34,7 @@ device = "auto"                    # auto | cuda | cpu
 
 [injection]
 method = "type"                    # "type" | "paste"
+type_delay_ms = 40                 # ms between simulated keystrokes in type mode (higher = more reliable, slower)
 
 [formatter]
 enabled = false
@@ -76,6 +77,7 @@ class Config:
     language: str
     transcribe_device: str
     injection_method: str
+    type_delay_ms: int
     formatter_enabled: bool
     formatter_backend: str
     ollama_model: str
@@ -130,6 +132,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
         language=str(tr.get("language", "en")),
         transcribe_device=str(tr.get("device", "auto")),
         injection_method=str(inj.get("method", "type")),
+        type_delay_ms=int(inj.get("type_delay_ms", 40)),
         formatter_enabled=bool(fmt.get("enabled", False)),
         formatter_backend=str(fmt.get("backend", "ollama")),
         ollama_model=str(fmt.get("ollama_model", "llama3.1")),

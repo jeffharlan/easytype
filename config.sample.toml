@@ -24,6 +24,7 @@ device = "auto"                    # auto | cuda | cpu
 
 [injection]
 method = "type"                    # "type" | "paste"
+type_delay_ms = 40                 # ms between simulated keystrokes in type mode (higher = more reliable, slower)
 
 [formatter]
 enabled = false

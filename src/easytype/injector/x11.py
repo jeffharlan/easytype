@@ -15,7 +15,7 @@ def paste_key_command() -> list[str]:
 
 
 class X11Injector:
-    def __init__(self, type_delay_ms: int = 12):
+    def __init__(self, type_delay_ms: int = 40):
         self._delay = type_delay_ms
 
     def inject(self, text: str, method: str) -> None:
