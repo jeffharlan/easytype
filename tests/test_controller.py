@@ -79,3 +79,13 @@ def test_enabled_names_excludes_cancel_when_idle(tmp_path):
     assert "cancel" not in ctrl.enabled_names()
     ctrl.on_record()
     assert "cancel" in ctrl.enabled_names()
+
+
+def test_cancel_during_transcribing_suppresses_inject(tmp_path):
+    ctrl, inj = build(tmp_path)
+    ctrl.on_record()              # recording
+    ctrl.state = "transcribing"   # simulate mid-transcription
+    ctrl.on_cancel()              # flags cancellation
+    text = ctrl.process_audio(np.zeros(10, dtype=np.float32))
+    assert text == ""
+    assert inj.injected == []
