@@ -4,6 +4,7 @@ import argparse
 import signal
 import subprocess
 import sys
+import threading
 
 from easytype import preflight
 from easytype.config import DEFAULT_CONFIG_PATH, load_config, load_doc, save_doc, set_hotkey_in_doc
@@ -108,15 +109,18 @@ def cmd_run(passive: bool) -> int:
     from easytype.recorder import Recorder
     from easytype.transcriber import Transcriber
 
+    transcriber = Transcriber(config.model, config.language, config.transcribe_device)
     controller = Controller(
         config=config,
         recorder=Recorder(config.audio_device),
-        transcriber=Transcriber(config.model, config.language, config.transcribe_device),
+        transcriber=transcriber,
         injector=get_injector(session, config.type_delay_ms),
         indicator=create_indicator(config),
         notify=_notify,
         synchronous=False,
     )
+    threading.Thread(target=transcriber.warmup, daemon=True).start()
+    print("[easytype] warming up the transcription model in the background…")
 
     engine = HotkeyEngine({
         "record": config.record.keys,

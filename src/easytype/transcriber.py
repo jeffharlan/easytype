@@ -23,6 +23,14 @@ class Transcriber:
             )
         return self._model
 
+    def warmup(self) -> None:
+        """Load the model and compile GPU kernels up front so the first real
+        transcription isn't slow. Best-effort; failures fall back to lazy load."""
+        try:
+            self.transcribe(np.zeros(16000, dtype=np.float32))
+        except Exception:
+            pass
+
     def transcribe(self, audio: np.ndarray) -> str:
         if audio.size == 0:
             return ""
