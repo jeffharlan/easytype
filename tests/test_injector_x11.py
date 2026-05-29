@@ -36,3 +36,8 @@ def test_is_terminal_false_for_apps():
     assert not is_terminal("code")
     assert not is_terminal("google-chrome")
     assert not is_terminal("org.gnome.texteditor")
+
+
+def test_is_terminal_matches_wezterm_process():
+    assert is_terminal("wezterm-gui")
+    assert is_terminal("gnome-terminal-")

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import subprocess
 import time
+from pathlib import Path
 
 CLIP = ["xclip", "-selection", "clipboard"]
 
-# Terminals paste with Ctrl+Shift+V, not Ctrl+V. Detected by window class.
+# Terminals paste with Ctrl+Shift+V, not Ctrl+V. Detected by the focused app's
+# process name (matched on the "term" substring, plus a few that lack it).
 TERMINAL_CLASSES = frozenset({
     "konsole", "alacritty", "kitty", "st", "foot", "urxvt", "rxvt",
     "tilix", "wezterm", "contour", "ghostty", "hyper", "yakuake",
@@ -22,19 +24,25 @@ def paste_key_command(shift: bool = False) -> list[str]:
     return ["xdotool", "key", "--clearmodifiers", combo]
 
 
-def _active_window_class() -> str:
+def _active_app_name() -> str:
+    """Focused app's process name. xdotool's getwindowclassname doesn't exist on
+    older xdotool, but getwindowpid does, and /proc/<pid>/comm is enough to spot a
+    terminal (e.g. 'wezterm-gui', 'gnome-terminal-')."""
     try:
         r = subprocess.run(
-            ["xdotool", "getactivewindow", "getwindowclassname"],
+            ["xdotool", "getactivewindow", "getwindowpid"],
             capture_output=True, text=True, timeout=1,
         )
-        return r.stdout.strip().lower() if r.returncode == 0 else ""
+        pid = r.stdout.strip()
+        if r.returncode != 0 or not pid:
+            return ""
+        return Path(f"/proc/{pid}/comm").read_text().strip().lower()
     except Exception:
         return ""
 
 
-def is_terminal(window_class: str) -> bool:
-    return "term" in window_class or window_class in TERMINAL_CLASSES
+def is_terminal(name: str) -> bool:
+    return "term" in name or name in TERMINAL_CLASSES
 
 
 class X11Injector:
@@ -52,7 +60,7 @@ class X11Injector:
     def _paste(self, text: str) -> None:
         saved = self._read_clipboard()
         subprocess.run(CLIP, input=text.encode(), check=True)
-        shift = is_terminal(_active_window_class())
+        shift = is_terminal(_active_app_name())
         subprocess.run(paste_key_command(shift), check=True)
         time.sleep(0.1)  # let the target app consume the paste before we restore
         if saved is not None:
