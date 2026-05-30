@@ -17,6 +17,12 @@ Because EasyType uses evdev grab-and-replay — it grabs the keyboard at the dev
 sudo apt install xdotool xclip libnotify-bin portaudio19-dev python3-tk
 ```
 
+The tray + Settings GUI (`easytype-gui`) additionally needs **`libxcb-cursor0`** — a runtime requirement of Qt 6.5+ that PySide6 does not bundle (without it the GUI exits immediately):
+
+```bash
+sudo apt install libxcb-cursor0
+```
+
 `python3-tk` is optional. It powers the small on-screen recording-timer pill. If it is missing, EasyType falls back to desktop notifications.
 
 Wayland support (ydotool, wl-clipboard) is planned but not included in Phase 1. On a Wayland session, use `--passive` mode.
@@ -97,6 +103,8 @@ EasyType ships a system-tray app in addition to the headless `easytype` command.
 ```bash
 easytype-gui
 ```
+
+> Needs `libxcb-cursor0` (see [Requirements](#requirements--system-dependencies)); without it the GUI exits at startup with a message telling you to install it.
 
 This puts an amber **E** icon in your system tray. The right-click menu shows status (Idle / Recording…), starts/stops dictation, switches Toggle⇄Hold, opens **Settings…**, and quits. The Settings window edits the same `~/.config/easytype/config.toml`; saving applies changes immediately (a transcription-model change re-warms in the background). Set hotkeys live: click **Set**, press your combo, release.
 

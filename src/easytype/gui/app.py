@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -157,7 +158,25 @@ class TrayApp:
         self._app.quit()
 
 
+def _missing_xcb_cursor() -> bool:
+    """Qt 6.5+'s xcb plugin needs libxcb-cursor0, which PySide6 doesn't bundle;
+    without it Qt aborts the process at QApplication(). True on X11 when it's absent."""
+    import ctypes.util
+
+    return (
+        sys.platform == "linux"
+        and os.environ.get("XDG_SESSION_TYPE") == "x11"
+        and ctypes.util.find_library("xcb-cursor") is None
+    )
+
+
 def main() -> None:
+    if _missing_xcb_cursor():
+        sys.stderr.write(
+            "EasyType GUI needs the system library libxcb-cursor0.\n"
+            "Install it:  sudo apt install libxcb-cursor0\n"
+        )
+        raise SystemExit(1)
     app = QApplication(sys.argv)
     app.setApplicationName("EasyType")
     if _already_running():
