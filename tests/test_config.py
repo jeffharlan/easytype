@@ -100,3 +100,26 @@ def test_apply_settings_preserves_comments(tmp_path: Path):
     cfg.save_doc(doc, path)
     text = path.read_text()
     assert "Raw evdev keycodes" in text          # standalone comment line survives
+
+
+def test_set_dictionary_round_trips(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    cfg.load_config(path)
+    doc = cfg.load_doc(path)
+    cfg.set_dictionary_in_doc(doc, [("claw.md", "claude.md"), ("ops plus", "OPS+")])
+    cfg.save_doc(doc, path)
+    c = cfg.load_config(path)
+    assert [(e.hears, e.replace, e.mode) for e in c.dictionary] == [
+        ("claw.md", "claude.md", "smart"),
+        ("ops plus", "OPS+", "smart"),
+    ]
+
+
+def test_set_dictionary_empty_clears_existing(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    cfg.load_config(path)
+    doc = cfg.load_doc(path)
+    cfg.set_dictionary_in_doc(doc, [("x", "y")])
+    cfg.set_dictionary_in_doc(doc, [])
+    cfg.save_doc(doc, path)
+    assert cfg.load_config(path).dictionary == ()

@@ -6,6 +6,21 @@ import sys
 from easytype.config import Config
 
 WARN_WINDOW_S = 5
+PILL_W, PILL_H, MARGIN = 150, 44, 24
+
+
+def _position_xy(position: str, sw: int, sh: int) -> tuple[int, int]:
+    cx = (sw - PILL_W) // 2
+    right = sw - PILL_W - MARGIN
+    bottom = sh - PILL_H - MARGIN * 2
+    return {
+        "top-left": (MARGIN, MARGIN),
+        "top-center": (cx, MARGIN),
+        "top-right": (right, MARGIN),
+        "bottom-left": (MARGIN, bottom),
+        "bottom-center": (cx, bottom),
+        "bottom-right": (right, bottom),
+    }.get(position, (right, MARGIN))
 
 
 def format_elapsed(seconds: int) -> str:
@@ -71,16 +86,9 @@ def _run_pill(position: str, count: str, cap: int) -> None:
     except tk.TclError:
         pass
 
-    w, h, margin = 150, 44, 24
     sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
-    x, y = {
-        "top-right": (sw - w - margin, margin),
-        "top-left": (margin, margin),
-        "top-center": ((sw - w) // 2, margin),
-        "bottom-right": (sw - w - margin, sh - h - margin * 2),
-        "bottom-left": (margin, sh - h - margin * 2),
-    }.get(position, (sw - w - margin, margin))
-    root.geometry(f"{w}x{h}+{x}+{y}")
+    x, y = _position_xy(position, sw, sh)
+    root.geometry(f"{PILL_W}x{PILL_H}+{x}+{y}")
 
     label = tk.Label(root, font=("sans", 14, "bold"), fg="white", bg="#111111", padx=12, pady=8)
     label.pack(fill="both", expand=True)

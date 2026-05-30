@@ -2,17 +2,21 @@ from __future__ import annotations
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QDialog, QFormLayout, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
+    QTabWidget, QVBoxLayout, QWidget,
 )
 
-from easytype.config import apply_settings_to_doc, load_config, load_doc, save_doc
+from easytype import autostart
+from easytype.config import (
+    apply_settings_to_doc, load_config, load_doc, save_doc, set_dictionary_in_doc,
+)
 from easytype.keycodes import conflict_note, describe_chord
 
 MODELS = ["tiny.en", "base.en", "small.en", "medium.en", "large-v3"]
 LANGS = ["en", "es", "fr", "de", "it", "pt", "nl"]
 COMPUTE = ["auto", "cuda", "cpu"]
-POSITIONS = ["top-right", "top-center", "bottom-right", "bottom-left", "top-left"]
+POSITIONS = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"]
 
 
 def _input_device_names() -> list[str]:
@@ -80,6 +84,7 @@ class SettingsWindow(QDialog):
         tabs.addTab(self._audio_tab(), "Audio & Transcription")
         tabs.addTab(self._typing_tab(), "Typing")
         tabs.addTab(self._ai_tab(), "AI cleanup")
+        tabs.addTab(self._dictionary_tab(), "Dictionary")
         tabs.addTab(self._indicator_tab(), "Indicator")
         tabs.addTab(self._advanced_tab(), "Advanced")
 
@@ -158,10 +163,49 @@ class SettingsWindow(QDialog):
         form.addRow("Count", self.indicator_count)
         return w
 
+    def _dictionary_tab(self):
+        w = QWidget(); layout = QVBoxLayout(w)
+        layout.addWidget(QLabel(
+            "Fix words the transcriber gets wrong. Matching is whole-word, any case."
+        ))
+        self.dict_table = QTableWidget(0, 2)
+        self.dict_table.setHorizontalHeaderLabels(["When you hear", "Type instead"])
+        self.dict_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self.dict_table)
+        add = QPushButton("Add"); add.clicked.connect(lambda: self._dict_add_row("", ""))
+        remove = QPushButton("Remove"); remove.clicked.connect(self._dict_remove_row)
+        row = QHBoxLayout(); row.addWidget(add); row.addWidget(remove); row.addStretch(1)
+        layout.addLayout(row)
+        return w
+
+    def _dict_add_row(self, hears, replace):
+        r = self.dict_table.rowCount()
+        self.dict_table.insertRow(r)
+        self.dict_table.setItem(r, 0, QTableWidgetItem(hears))
+        self.dict_table.setItem(r, 1, QTableWidgetItem(replace))
+
+    def _dict_remove_row(self):
+        r = self.dict_table.currentRow()
+        if r >= 0:
+            self.dict_table.removeRow(r)
+
+    def _dict_entries(self):
+        entries = []
+        for r in range(self.dict_table.rowCount()):
+            hears = self.dict_table.item(r, 0)
+            replace = self.dict_table.item(r, 1)
+            hears = hears.text().strip() if hears else ""
+            replace = replace.text().strip() if replace else ""
+            if hears and replace:
+                entries.append((hears, replace))
+        return entries
+
     def _advanced_tab(self):
         w = QWidget(); form = QFormLayout(w)
+        self.start_on_login = QCheckBox("Start EasyType automatically when you log in")
         self.keyboard_device = QLineEdit()
         self.keyboard_device.setPlaceholderText("blank = auto-detect")
+        form.addRow(self.start_on_login)
         form.addRow("Keyboard device", self.keyboard_device)
         return w
 
@@ -191,6 +235,10 @@ class SettingsWindow(QDialog):
         self.indicator_position.setCurrentText(c.indicator_position)
         self.indicator_count.setCurrentText(c.indicator_count)
         self.keyboard_device.setText(c.keyboard_device)
+        self.start_on_login.setChecked(autostart.is_enabled())
+        self.dict_table.setRowCount(0)
+        for entry in c.dictionary:
+            self._dict_add_row(entry.hears, entry.replace)
         self._sync_ai_enabled(c.formatter_enabled)
 
     def _values(self):
@@ -220,7 +268,9 @@ class SettingsWindow(QDialog):
         try:
             doc = load_doc()
             apply_settings_to_doc(doc, self._values())
+            set_dictionary_in_doc(doc, self._dict_entries())
             save_doc(doc)
+            autostart.set_enabled(self.start_on_login.isChecked())
         except Exception as exc:
             QMessageBox.critical(self, "EasyType", f"Could not save settings:\n{exc}")
             return

@@ -44,7 +44,7 @@ ollama_url = "http://localhost:11434"
 
 [indicator]
 enabled = true
-position = "top-right"             # top-right | top-center | bottom-right | bottom-left | top-left
+position = "top-right"             # top-left | top-center | top-right | bottom-left | bottom-center | bottom-right
 count = "up"                       # "up" | "down"
 
 [keyboard]
@@ -184,6 +184,23 @@ def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
     ind["count"] = values["indicator_count"]
 
     _table(doc, "keyboard")["device"] = values["keyboard_device"]
+
+
+def set_dictionary_in_doc(doc: tomlkit.TOMLDocument, entries: list[tuple[str, str]]) -> None:
+    """Replace the [[dictionary]] array-of-tables with (hears, replace) pairs. All
+    GUI-added entries use whole-word, case-insensitive ('smart') matching."""
+    if "dictionary" in doc:
+        del doc["dictionary"]
+    if not entries:
+        return
+    aot = tomlkit.aot()
+    for hears, replace in entries:
+        item = tomlkit.table()
+        item["hears"] = hears
+        item["replace"] = replace
+        item["mode"] = "smart"
+        aot.append(item)
+    doc["dictionary"] = aot
 
 
 def set_hotkey_in_doc(doc: tomlkit.TOMLDocument, name: str, keys: list[int], description: str) -> None:
