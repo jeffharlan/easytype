@@ -90,6 +90,25 @@ easytype
 
 Press Ctrl+Space to begin recording. An on-screen timer pill appears showing elapsed time (counting up by default). Press Ctrl+Space again to stop and transcribe, or press Esc to cancel without inserting anything. When transcription is complete, the text is inserted at your cursor. Press F8 at any time to re-inject the last transcript.
 
+## Tray & Settings GUI (Phase 2)
+
+EasyType ships a system-tray app in addition to the headless `easytype` command.
+
+```bash
+easytype-gui
+```
+
+This puts an amber **E** icon in your system tray. The right-click menu shows status (Idle / Recording…), starts/stops dictation, switches Toggle⇄Hold, opens **Settings…**, and quits. The Settings window edits the same `~/.config/easytype/config.toml`; saving applies changes immediately (a transcription-model change re-warms in the background). Set hotkeys live: click **Set**, press your combo, release.
+
+The headless `easytype` command is unchanged and remains the right choice for servers or a systemd unit.
+
+### Start at login
+
+```bash
+mkdir -p ~/.config/autostart
+cp autostart/easytype.desktop ~/.config/autostart/
+```
+
 ## Configuration
 
 The config file is created automatically at `~/.config/easytype/config.toml` on first run. A fully-commented reference copy is at `config.sample.toml` in this repository.

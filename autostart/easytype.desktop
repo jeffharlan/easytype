@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=EasyType
+Comment=Local voice dictation (system tray)
+Exec=easytype-gui
+Icon=easytype
+Terminal=false
+Categories=Utility;Accessibility;
+X-GNOME-Autostart-enabled=true
