@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QRectF
-from PySide6.QtGui import QAction, QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
@@ -113,8 +113,16 @@ class TrayApp:
         quit_action.triggered.connect(self._quit)
         menu.addAction(quit_action)
 
+        self._menu = menu
         self._tray.setContextMenu(menu)
+        self._tray.activated.connect(self._on_activated)
         self._update_mode_label()
+
+    def _on_activated(self, reason):
+        # A left-click (Trigger) doesn't open the context menu by default; pop it
+        # ourselves so a single click on the tray icon shows the menu.
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self._menu.popup(QCursor.pos())
 
     def _update_mode_label(self):
         self._mode_action.setText(
