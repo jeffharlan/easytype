@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import sys
 from pathlib import Path
 
@@ -105,11 +106,11 @@ class TrayApp:
         menu.addAction(self._mode_action)
         menu.addSeparator()
 
-        settings = QAction("Settings…")
+        settings = QAction("Settings…", menu)
         settings.triggered.connect(self._open_settings)
         menu.addAction(settings)
 
-        quit_action = QAction("Quit")
+        quit_action = QAction("Quit", menu)
         quit_action.triggered.connect(self._quit)
         menu.addAction(quit_action)
 
@@ -206,4 +207,8 @@ def main() -> None:
 
     tray = TrayApp(app)
     app._easytype_tray = tray                     # keep a strong reference
+
+    # Qt's event loop blocks Python's SIGINT handler, so Ctrl+C is otherwise
+    # ignored; hand SIGINT back to the OS default so it terminates the app.
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     sys.exit(app.exec())
