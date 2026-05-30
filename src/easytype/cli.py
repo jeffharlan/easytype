@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import signal
-import subprocess
 import sys
 import threading
 
@@ -19,10 +18,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Interactively capture a hotkey, then save it",
     )
     return parser
-
-
-def _notify(title: str, body: str) -> None:
-    subprocess.run(["notify-send", title, body], check=False)
 
 
 def _raise_keyboard_interrupt(signum, frame):
@@ -93,44 +88,11 @@ def cmd_run(passive: bool) -> int:
         print("\nFalling back to --passive (no consume) because grab prerequisites are missing.")
         grab = False
 
-    from easytype.chords import HotkeyEngine
-    from easytype.controller import Controller
-    from easytype.indicator import create_indicator
-    from easytype.injector import get_injector
-    from easytype.listener import Listener
-    from easytype.recorder import Recorder
-    from easytype.transcriber import Transcriber
+    from easytype.engine import build_engine
 
-    transcriber = Transcriber(config.model, config.language, config.transcribe_device)
-    controller = Controller(
-        config=config,
-        recorder=Recorder(config.audio_device),
-        transcriber=transcriber,
-        injector=get_injector(session, config.type_delay_ms),
-        indicator=create_indicator(config),
-        notify=_notify,
-        synchronous=False,
-    )
-    threading.Thread(target=transcriber.warmup, daemon=True).start()
+    bundle = build_engine(config, session)
+    threading.Thread(target=bundle.warmup, daemon=True).start()
     print("[easytype] warming up the transcription model in the background…")
-
-    engine = HotkeyEngine({
-        "record": config.record.keys,
-        "cancel": config.cancel.keys,
-        "repaste": config.repaste.keys,
-    })
-
-    def on_event(outcome):
-        if outcome.pressed == "record":
-            controller.on_record()
-        elif outcome.released == "record":
-            controller.on_record_release()
-        elif outcome.pressed == "cancel":
-            controller.on_cancel()
-        elif outcome.pressed == "repaste":
-            controller.on_repaste()
-
-    listener = Listener(engine, controller.enabled_names, on_event)
 
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, _raise_keyboard_interrupt)
@@ -138,11 +100,11 @@ def cmd_run(passive: bool) -> int:
     print(f"[easytype] session={session}  mode={config.capture_mode}  "
           f"record={config.record.description}  grab={grab}")
     try:
-        listener.run(device_override=config.keyboard_device, grab=grab)
+        bundle.listener.run(device_override=config.keyboard_device, grab=grab)
     except KeyboardInterrupt:
         print("\n[easytype] shutting down…")
     finally:
-        listener.cleanup()
+        bundle.listener.cleanup()
     return 0
 
 
