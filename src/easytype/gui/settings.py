@@ -51,6 +51,9 @@ class HotkeyRow(QWidget):
         self._note.setText("")
 
     def _begin(self):
+        if self._sup.state == "stopped":
+            self._note.setText("Start dictation first to set a hotkey")
+            return
         self._set.setText("Press keys…")
         self._set.setEnabled(False)
         self._sup.begin_hotkey_capture(lambda keys: self.captured.emit(keys))

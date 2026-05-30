@@ -64,10 +64,6 @@ class EngineSupervisor:
         if self._bundle is not None:
             self._bundle.controller.toggle_recording()
 
-    def cancel(self) -> None:
-        if self._bundle is not None:
-            self._bundle.controller.on_cancel()
-
     def begin_hotkey_capture(self, on_captured: Callable[[list], None]) -> None:
         if self._bundle is not None:
             self._bundle.listener.begin_capture(on_captured)

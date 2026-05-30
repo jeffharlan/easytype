@@ -59,7 +59,9 @@ class TrayApp:
 
         session = preflight.detect_session()
         self._wayland = session == "wayland"
-        self._sup = EngineSupervisor(session=session, grab=self._decide_grab())
+        grab = self._decide_grab()
+        self._passive = not self._wayland and not grab
+        self._sup = EngineSupervisor(session=session, grab=grab)
 
         if self._wayland:
             QMessageBox.warning(
@@ -146,7 +148,8 @@ class TrayApp:
         active = state in ("recording", "transcribing")
         self._tray.setIcon(self._active_icon if active else self._idle_icon)
         self._toggle_rec.setText("Stop dictation" if active else "Start dictation")
-        self._tray.setToolTip(f"EasyType — {label}")
+        suffix = " · passive" if self._passive else ""
+        self._tray.setToolTip(f"EasyType — {label}{suffix}")
 
     def _quit(self):
         self._timer.stop()
