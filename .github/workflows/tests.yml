@@ -1,0 +1,20 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The suite is hermetic: it exercises only these runtime deps, not the
+      # heavy audio/GPU/Qt stack, so CI stays fast and dependable.
+      - run: pip install -e . --no-deps
+      - run: pip install numpy tomlkit pytest
+      - run: pytest -q

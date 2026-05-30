@@ -1,6 +1,8 @@
 # EasyType
 
-EasyType is a system-wide, local push-to-talk and toggle voice dictation tool for Linux. Press a hotkey, speak, and the transcribed text is inserted at the cursor in whatever app is currently focused — a terminal, a browser text field, a chat window, anything. Transcription runs entirely on your own machine via [faster-whisper](https://github.com/guillaumekl/faster-whisper), so there is no API bill and your audio never leaves the box. Phase 1 targets X11; the architecture is Wayland-ready. Released under the MIT License.
+[![tests](https://github.com/jeffharlan/easytype/actions/workflows/tests.yml/badge.svg)](https://github.com/jeffharlan/easytype/actions/workflows/tests.yml)
+
+EasyType is a system-wide, local push-to-talk and toggle voice dictation tool for Linux. Press a hotkey, speak, and the transcribed text is inserted at the cursor in whatever app is currently focused — a terminal, a browser text field, a chat window, anything. Transcription runs entirely on your own machine via [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so there is no API bill and your audio never leaves the box. EasyType runs on X11 today; Wayland support is planned. Released under the MIT License.
 
 ## How it works
 
@@ -25,7 +27,7 @@ sudo apt install libxcb-cursor0
 
 `python3-tk` is optional. It powers the small on-screen recording-timer pill. If it is missing, EasyType falls back to desktop notifications.
 
-Wayland support (ydotool, wl-clipboard) is planned but not included in Phase 1. On a Wayland session, use `--passive` mode.
+Wayland support (ydotool, wl-clipboard) is planned. On a Wayland session, use `--passive` mode.
 
 ## Install
 
@@ -96,7 +98,7 @@ easytype
 
 Press Ctrl+Space to begin recording. An on-screen timer pill appears showing elapsed time (counting up by default). Press Ctrl+Space again to stop and transcribe, or press Esc to cancel without inserting anything. When transcription is complete, the text is inserted at your cursor. Press F8 at any time to re-inject the last transcript.
 
-## Tray & Settings GUI (Phase 2)
+## Tray & Settings GUI
 
 EasyType ships a system-tray app in addition to the headless `easytype` command.
 
@@ -108,9 +110,13 @@ easytype-gui
 
 This puts an amber **E** icon in your system tray. The right-click menu shows status (Idle / Recording…), starts/stops dictation, switches Toggle⇄Hold, opens **Settings…**, and quits. The Settings window edits the same `~/.config/easytype/config.toml`; saving applies changes immediately (a transcription-model change re-warms in the background). Set hotkeys live: click **Set**, press your combo, release.
 
+Everything is configurable from the Settings window — hotkeys, microphone and model, AI cleanup on/off, a **Dictionary** tab for word fixes, the on-screen indicator, and a **Start on login** toggle — so you never have to edit the config file by hand.
+
 The headless `easytype` command is unchanged and remains the right choice for servers or a systemd unit.
 
 ### Start at login
+
+Tick **Start on login** in Settings → Advanced. To set it up manually instead:
 
 ```bash
 mkdir -p ~/.config/autostart
@@ -173,7 +179,7 @@ The config file is created automatically at `~/.config/easytype/config.toml` on 
 | Key | Values | Description |
 |-----|--------|-------------|
 | `enabled` | `true` \| `false` | Show the timer pill while recording. |
-| `position` | `top-right` \| `top-center` \| `bottom-right` \| `bottom-left` \| `top-left` | Screen corner. |
+| `position` | `top-left` \| `top-center` \| `top-right` \| `bottom-left` \| `bottom-center` \| `bottom-right` | Where the timer pill appears. |
 | `count` | `up` \| `down` | Count up from 0 or count down from `max_recording_duration`. |
 
 **`[keyboard]`:**
@@ -225,6 +231,17 @@ cp systemd/easytype.service ~/.config/systemd/user/
 systemctl --user enable --now easytype
 ```
 
+## Development
+
+```bash
+git clone https://github.com/jeffharlan/easytype
+cd easytype
+pip install -e ".[dev]"
+pytest
+```
+
+The test suite is hermetic — no microphone, GPU, or GUI toolkit required.
+
 ## Troubleshooting
 
 **Check your session type:**
@@ -233,7 +250,7 @@ systemctl --user enable --now easytype
 echo $XDG_SESSION_TYPE
 ```
 
-Phase 1 supports X11 only. On a Wayland session, text injection is not implemented yet — use `easytype --passive` to test transcription, and watch for Phase 2.
+EasyType supports X11. On a Wayland session, text injection is not implemented yet — use `easytype --passive` to test transcription. Wayland support is planned.
 
 **Stuck keyboard:** The evdev grab is always released on exit, whether that is a clean shutdown, a crash, or Ctrl+C / SIGTERM. If grab prerequisites are missing at startup, EasyType falls back to passive mode automatically rather than holding the grab in a broken state.
 
