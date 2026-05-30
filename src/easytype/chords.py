@@ -72,3 +72,31 @@ class HotkeyEngine:
             name = self._active.pop(code, None)
             return KeyOutcome(swallow=True, released=name)
         return KeyOutcome(swallow=False)
+
+
+class ChordCollector:
+    """Records the first-press order of a key chord and reports completion once
+    every pressed key is released. Shared by the CLI `--set-hotkey` capture and
+    the GUI's in-window 'Set' capture."""
+
+    def __init__(self) -> None:
+        self._pressed: list[int] = []   # first-press order
+        self._seen: set[int] = set()
+        self._down: set[int] = set()
+        self._done = False
+
+    def feed(self, code: int, value: int) -> bool:
+        if value == 1:                  # key down
+            if code not in self._seen:
+                self._seen.add(code)
+                self._pressed.append(code)
+            self._down.add(code)
+        elif value == 0:                # key up
+            self._down.discard(code)
+            if self._pressed and not self._down:
+                self._done = True
+        return self._done
+
+    @property
+    def keys(self) -> list[int]:
+        return list(self._pressed)

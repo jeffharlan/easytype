@@ -1,4 +1,4 @@
-from easytype.chords import HotkeyEngine, trigger_key
+from easytype.chords import HotkeyEngine, trigger_key, ChordCollector
 
 KEY_LEFTCTRL, KEY_SPACE, KEY_ESC, KEY_F8, KEY_BACKSLASH, KEY_A, KEY_RIGHTCTRL = 29, 57, 1, 66, 43, 30, 97
 
@@ -84,3 +84,37 @@ def test_modifier_key_itself_is_forwarded():
     eng = make_engine()
     enabled = {"record", "cancel", "repaste"}
     assert eng.feed(KEY_RIGHTCTRL, 1, enabled).swallow is False
+
+
+def test_chord_collector_single_key():
+    c = ChordCollector()
+    assert c.feed(KEY_SPACE, 1) is False
+    assert c.feed(KEY_SPACE, 0) is True
+    assert c.keys == [KEY_SPACE]
+
+
+def test_chord_collector_modifier_combo_completes_on_full_release():
+    c = ChordCollector()
+    c.feed(KEY_LEFTCTRL, 1)
+    c.feed(KEY_SPACE, 1)
+    assert c.feed(KEY_SPACE, 0) is False     # ctrl still held
+    assert c.feed(KEY_LEFTCTRL, 0) is True
+    assert c.keys == [KEY_LEFTCTRL, KEY_SPACE]
+
+
+def test_chord_collector_preserves_press_order_regardless_of_release_order():
+    c = ChordCollector()
+    c.feed(KEY_LEFTCTRL, 1)
+    c.feed(KEY_SPACE, 1)
+    c.feed(KEY_LEFTCTRL, 0)                   # release ctrl first
+    assert c.feed(KEY_SPACE, 0) is True
+    assert c.keys == [KEY_LEFTCTRL, KEY_SPACE]
+
+
+def test_chord_collector_ignores_autorepeat_and_duplicate_press():
+    c = ChordCollector()
+    c.feed(KEY_SPACE, 1)
+    c.feed(KEY_SPACE, 2)                      # autorepeat
+    c.feed(KEY_SPACE, 1)                      # duplicate down
+    assert c.feed(KEY_SPACE, 0) is True
+    assert c.keys == [KEY_SPACE]

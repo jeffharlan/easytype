@@ -41,35 +41,27 @@ def cmd_set_hotkey(name: str) -> int:
 
     from evdev import ecodes
 
+    from easytype.chords import ChordCollector
     from easytype.keycodes import conflict_note, describe_chord
     from easytype.listener import open_devices
 
     print(f"Press the key or combination you want for '{name}', then release.")
     devices = open_devices("")
-    pressed: list[int] = []
-    seen: set[int] = set()
+    collector = ChordCollector()
     try:
         sel = selectors.DefaultSelector()
         for d in devices:
             sel.register(d, selectors.EVENT_READ)
-        down: set[int] = set()
-        while True:
-            done = False
+        done = False
+        while not done:
             for key, _ in sel.select():
                 for ev in key.fileobj.read():
-                    if ev.type != ecodes.EV_KEY:
-                        continue
-                    if ev.value == 1 and ev.code not in seen:
-                        seen.add(ev.code); pressed.append(ev.code); down.add(ev.code)
-                    elif ev.value == 0:
-                        down.discard(ev.code)
-                        if pressed and not down:
-                            done = True
-            if done:
-                break
+                    if ev.type == ecodes.EV_KEY and collector.feed(ev.code, ev.value):
+                        done = True
     finally:
         for d in devices:
             d.close()
+    pressed = collector.keys
 
     desc = describe_chord(pressed)
     note = conflict_note(pressed)
