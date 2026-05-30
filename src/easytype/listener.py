@@ -109,17 +109,17 @@ class Listener:
                 if cb:
                     cb(keys)
             return                          # swallow everything during capture
-        if event.type != ecodes.EV_KEY:
-            if self._ui is not None:
-                self._ui.write_event(event)
-                self._ui.syn()
-            return
-        outcome = self._engine.feed(event.code, event.value, self._enabled())
-        if outcome.pressed or outcome.released:
-            self._on_event(outcome)
-        if not outcome.swallow and self._ui is not None:
+        if event.type == ecodes.EV_KEY:
+            outcome = self._engine.feed(event.code, event.value, self._enabled())
+            if outcome.pressed or outcome.released:
+                self._on_event(outcome)
+            if outcome.swallow:
+                return
+        # Replay faithfully: forward each event, including the stream's own EV_SYN,
+        # which flushes the report. Syncing after every event instead would split
+        # the kernel's atomic MSC_SCAN+EV_KEY group and break keys like PrtSc.
+        if self._ui is not None:
             self._ui.write_event(event)
-            self._ui.syn()
 
     def cleanup(self) -> None:
         if self._grabbed:
