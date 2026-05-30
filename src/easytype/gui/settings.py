@@ -77,7 +77,7 @@ class SettingsWindow(QDialog):
         self._sup = supervisor
         self._on_saved = on_saved
         self.setWindowTitle("EasyType — Settings")
-        self.resize(480, 440)
+        self.resize(760, 460)
 
         tabs = QTabWidget()
         tabs.addTab(self._recording_tab(), "Recording")

@@ -4,6 +4,8 @@
 
 EasyType is a system-wide, local push-to-talk and toggle voice dictation tool for Linux. Press a hotkey, speak, and the transcribed text is inserted at the cursor in whatever app is currently focused — a terminal, a browser text field, a chat window, anything. Transcription runs entirely on your own machine via [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so there is no API bill and your audio never leaves the box. EasyType runs on X11 today; Wayland support is planned. Released under the MIT License.
 
+![EasyType Settings — every option in one window](docs/images/settings.png)
+
 ## How it works
 
 EasyType runs a background listener that grabs your keyboard device via evdev. When you press the hotkey, it starts recording from the microphone. In toggle mode, press the hotkey again to stop; in hold mode, release it. The recording is passed to faster-whisper for local transcription. Optional dictionary substitutions are applied (e.g., replace a misheard name), and an optional LLM formatter can clean up punctuation or phrasing. The finished text is injected at the cursor using `xdotool type` or `xdotool key ctrl+v` (paste mode).
@@ -108,7 +110,9 @@ easytype-gui
 
 > Needs `libxcb-cursor0` (see [Requirements](#requirements--system-dependencies)); without it the GUI exits at startup with a message telling you to install it.
 
-This puts an amber **E** icon in your system tray. The right-click menu shows status (Idle / Recording…), starts/stops dictation, switches Toggle⇄Hold, opens **Settings…**, and quits. The Settings window edits the same `~/.config/easytype/config.toml`; saving applies changes immediately (a transcription-model change re-warms in the background). Set hotkeys live: click **Set**, press your combo, release.
+This puts an amber **E** icon in your system tray.
+
+![EasyType tray icon](docs/images/tray.png) The right-click menu shows status (Idle / Recording…), starts/stops dictation, switches Toggle⇄Hold, opens **Settings…**, and quits. The Settings window edits the same `~/.config/easytype/config.toml`; saving applies changes immediately (a transcription-model change re-warms in the background). Set hotkeys live: click **Set**, press your combo, release.
 
 Everything is configurable from the Settings window — hotkeys, microphone and model, AI cleanup on/off, a **Dictionary** tab for word fixes, the on-screen indicator, and a **Start on login** toggle — so you never have to edit the config file by hand.
 
