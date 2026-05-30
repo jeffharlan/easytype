@@ -89,3 +89,21 @@ def test_cancel_during_transcribing_suppresses_inject(tmp_path):
     text = ctrl.process_audio(np.zeros(10, dtype=np.float32))
     assert text == ""
     assert inj.injected == []
+
+
+def test_toggle_recording_starts_then_stops(tmp_path):
+    ctrl, inj = build(tmp_path)
+    assert ctrl.state == "idle"
+    ctrl.toggle_recording()
+    assert ctrl.state == "recording"
+    ctrl.toggle_recording()                       # synchronous in test mode
+    assert ctrl.state == "idle"
+    assert inj.injected and inj.injected[0][0] == "ops plus is ready"
+
+
+def test_toggle_recording_noop_while_transcribing(tmp_path):
+    ctrl, inj = build(tmp_path)
+    ctrl.toggle_recording()                       # recording
+    ctrl.state = "transcribing"
+    ctrl.toggle_recording()                       # must do nothing
+    assert ctrl.state == "transcribing"

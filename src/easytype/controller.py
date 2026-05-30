@@ -67,6 +67,14 @@ class Controller:
         if self.last_transcript:
             self._inj.inject(self.last_transcript, self._cfg.injection_method)
 
+    def toggle_recording(self) -> None:
+        """Manual start/stop for the tray, independent of capture_mode."""
+        with self._lock:
+            if self.state == "idle":
+                self._start()
+            elif self.state == "recording":
+                self._stop_and_process()
+
     # --- internals ----------------------------------------------------------
     def _start(self) -> None:
         self._cancelled = False
