@@ -1,5 +1,5 @@
 from easytype.config import load_config
-from easytype.formatter import format_text
+from easytype.formatter import format_text, _unwrap
 
 
 def _cfg(tmp_path, **over):
@@ -32,3 +32,12 @@ def test_ollama_result_used(tmp_path, monkeypatch):
     c = _cfg(tmp_path, enabled=True, backend="ollama")
     monkeypatch.setattr("easytype.formatter._call_ollama", lambda text, cfg: "cleaned transcript")
     assert format_text("raw transcript", c) == "cleaned transcript"
+
+
+def test_unwrap_strips_model_preamble_and_quotes():
+    raw = 'Here is the cleaned-up text:\n\n"Let\'s schedule the site walk."'
+    assert _unwrap(raw) == "Let's schedule the site walk."
+
+
+def test_unwrap_leaves_clean_text_untouched():
+    assert _unwrap("Send the proposal Wednesday.") == "Send the proposal Wednesday."

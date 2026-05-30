@@ -7,9 +7,10 @@ import urllib.request
 from easytype.config import Config
 
 PROMPT = (
-    "Clean up this dictated text: remove filler words (um, uh, like), resolve spoken "
-    "self-corrections, and fix punctuation. Preserve meaning and wording otherwise. "
-    "Return ONLY the cleaned text.\n\nText:\n"
+    "Clean up this dictated text: remove filler words (um, uh, like), keep only the "
+    "final wording when the speaker corrects themselves, and fix punctuation and "
+    "capitalization. Preserve meaning otherwise. Output ONLY the cleaned text — no "
+    "preamble, no explanation, no surrounding quotes.\n\nText:\n"
 )
 
 
@@ -17,11 +18,23 @@ def format_text(text: str, config: Config) -> str:
     if not config.formatter_enabled or not text.strip():
         return text
     try:
-        if config.formatter_backend == "openai":
-            return _call_openai(text, config) or text
-        return _call_ollama(text, config) or text
+        call = _call_openai if config.formatter_backend == "openai" else _call_ollama
+        return _unwrap(call(text, config)) or text
     except Exception:
         return text  # never lose the transcript over a cleanup failure
+
+
+def _unwrap(out: str) -> str:
+    """Small models often wrap the answer in a 'Here is ...:' preamble line and/or
+    surrounding quotes despite being told not to. Strip those so only the cleaned
+    text reaches the document."""
+    out = (out or "").strip()
+    head, sep, rest = out.partition("\n")
+    if sep and head.rstrip().endswith(":") and len(head) <= 60:
+        out = rest.strip()
+    if len(out) >= 2 and out[0] in "\"'“‘" and out[-1] in "\"'”’":
+        out = out[1:-1].strip()
+    return out
 
 
 def _call_ollama(text: str, config: Config) -> str:
@@ -29,12 +42,13 @@ def _call_ollama(text: str, config: Config) -> str:
         "model": config.ollama_model,
         "prompt": PROMPT + text,
         "stream": False,
+        "options": {"temperature": 0},
     }).encode()
     req = urllib.request.Request(
         f"{config.ollama_url}/api/generate", data=payload,
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, timeout=60) as resp:
         return json.loads(resp.read())["response"].strip()
 
 
