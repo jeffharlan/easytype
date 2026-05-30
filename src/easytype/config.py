@@ -145,6 +145,47 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
     )
 
 
+def _table(doc: tomlkit.TOMLDocument, name: str):
+    if name not in doc:
+        doc[name] = tomlkit.table()
+    return doc[name]
+
+
+def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
+    """Write a flat settings dict into the TOML document, preserving comments.
+    Reuses set_hotkey_in_doc for the three hotkeys."""
+    doc["capture_mode"] = values["capture_mode"]
+    doc["max_recording_duration"] = int(values["max_recording_duration"])
+
+    set_hotkey_in_doc(doc, "record", list(values["record_keys"]), values["record_description"])
+    set_hotkey_in_doc(doc, "cancel", list(values["cancel_keys"]), values["cancel_description"])
+    set_hotkey_in_doc(doc, "repaste", list(values["repaste_keys"]), values["repaste_description"])
+
+    _table(doc, "audio")["device"] = values["audio_device"]
+
+    tr = _table(doc, "transcription")
+    tr["model"] = values["model"]
+    tr["language"] = values["language"]
+    tr["device"] = values["transcribe_device"]
+
+    inj = _table(doc, "injection")
+    inj["method"] = values["injection_method"]
+    inj["type_delay_ms"] = int(values["type_delay_ms"])
+
+    fmt = _table(doc, "formatter")
+    fmt["enabled"] = bool(values["formatter_enabled"])
+    fmt["backend"] = values["formatter_backend"]
+    fmt["ollama_model"] = values["ollama_model"]
+    fmt["ollama_url"] = values["ollama_url"]
+
+    ind = _table(doc, "indicator")
+    ind["enabled"] = bool(values["indicator_enabled"])
+    ind["position"] = values["indicator_position"]
+    ind["count"] = values["indicator_count"]
+
+    _table(doc, "keyboard")["device"] = values["keyboard_device"]
+
+
 def set_hotkey_in_doc(doc: tomlkit.TOMLDocument, name: str, keys: list[int], description: str) -> None:
     if "hotkey" not in doc:
         doc["hotkey"] = tomlkit.table()

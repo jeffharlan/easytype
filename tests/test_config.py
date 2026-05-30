@@ -53,3 +53,50 @@ def test_set_record_hotkey_preserves_file(tmp_path: Path):
     c = cfg.load_config(path)
     assert c.record.keys == (29, 43)
     assert c.record.description == "Ctrl+\\"
+
+
+SAMPLE_SETTINGS = {
+    "capture_mode": "hold",
+    "max_recording_duration": 30,
+    "record_keys": [29, 43], "record_description": "Ctrl+\\",
+    "cancel_keys": [1], "cancel_description": "Esc",
+    "repaste_keys": [66], "repaste_description": "F8",
+    "audio_device": "",
+    "model": "small.en", "language": "en", "transcribe_device": "cuda",
+    "injection_method": "paste", "type_delay_ms": 25,
+    "formatter_enabled": True, "formatter_backend": "ollama",
+    "ollama_model": "llama3.1", "ollama_url": "http://localhost:11434",
+    "indicator_enabled": False, "indicator_position": "bottom-left", "indicator_count": "down",
+    "keyboard_device": "",
+}
+
+
+def test_apply_settings_round_trips(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    cfg.load_config(path)                       # write defaults
+    doc = cfg.load_doc(path)
+    cfg.apply_settings_to_doc(doc, SAMPLE_SETTINGS)
+    cfg.save_doc(doc, path)
+    c = cfg.load_config(path)
+    assert c.capture_mode == "hold"
+    assert c.max_recording_duration == 30
+    assert c.model == "small.en"
+    assert c.transcribe_device == "cuda"
+    assert c.injection_method == "paste"
+    assert c.type_delay_ms == 25
+    assert c.formatter_enabled is True
+    assert c.indicator_enabled is False
+    assert c.indicator_position == "bottom-left"
+    assert c.indicator_count == "down"
+    assert c.record.keys == (29, 43)
+    assert c.record.description == "Ctrl+\\"
+
+
+def test_apply_settings_preserves_comments(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    cfg.load_config(path)
+    doc = cfg.load_doc(path)
+    cfg.apply_settings_to_doc(doc, SAMPLE_SETTINGS)
+    cfg.save_doc(doc, path)
+    text = path.read_text()
+    assert "Raw evdev keycodes" in text          # standalone comment line survives
