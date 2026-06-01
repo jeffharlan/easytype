@@ -52,10 +52,12 @@ class Listener:
         self._stopping = False
         self._capture = None        # ChordCollector while capturing a hotkey
         self._capture_cb = None
+        self._device_override = ""
 
     def run(self, *, device_override: str = "", grab: bool = True) -> None:
         from evdev import UInput, ecodes
 
+        self._device_override = device_override
         self._devices = open_devices(device_override)
         self._stop_r, self._stop_w = os.pipe()
         self._stopping = False
@@ -96,8 +98,63 @@ class Listener:
             for key, _mask in sel.select():
                 if key.fd == self._stop_r:
                     return
-                for event in key.fileobj.read():
+                try:
+                    events = list(key.fileobj.read())
+                except BlockingIOError:
+                    continue
+                except OSError:
+                    # The device vanished mid-read (ENODEV on suspend/resume or
+                    # unplug). Drop it and re-acquire keyboards so dictation
+                    # survives instead of the listener thread dying.
+                    dev = key.fileobj
+                    print(f"[easytype] keyboard disconnected ({dev.path}); waiting for it to return…")
+                    self._drop_device(sel, dev)
+                    self._reconnect(sel)
+                    break
+                for event in events:
                     self._handle(event, ecodes)
+
+    def _drop_device(self, sel, dev) -> None:
+        try:
+            sel.unregister(dev)
+        except (KeyError, ValueError):
+            pass
+        if dev in self._devices:
+            self._devices.remove(dev)
+        try:
+            dev.close()                 # already gone, so no ungrab — just release the fd
+        except OSError:
+            pass
+
+    def _reconnect(self, sel) -> None:
+        """Re-acquire keyboards after one vanished. Polls so stop() still wakes us,
+        re-grabbing and registering each keyboard we don't already hold. Returns as
+        soon as any device is in hand so a surviving keyboard keeps working."""
+        held = {d.path for d in self._devices}
+        while not self._stopping:
+            try:
+                found = open_devices(self._device_override)
+            except Exception:
+                found = []
+            for d in found:
+                if d.path in held:
+                    d.close()
+                    continue
+                if self._grabbed:
+                    try:
+                        d.grab()
+                    except OSError:
+                        d.close()
+                        continue
+                self._devices.append(d)
+                held.add(d.path)
+                sel.register(d, selectors.EVENT_READ)
+                print(f"[easytype] keyboard reconnected ({d.path})")
+            if self._devices:
+                return
+            for key, _mask in sel.select(timeout=1.0):
+                if key.fd == self._stop_r:
+                    return
 
     def _handle(self, event, ecodes) -> None:
         if self._capture is not None:
