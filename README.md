@@ -258,6 +258,8 @@ EasyType supports X11. On a Wayland session, text injection is not implemented y
 
 **Stuck keyboard:** The evdev grab is always released on exit, whether that is a clean shutdown, a crash, or Ctrl+C / SIGTERM. If grab prerequisites are missing at startup, EasyType falls back to passive mode automatically rather than holding the grab in a broken state.
 
+**Hotkey stops working after a disconnect or suspend:** EasyType automatically re-attaches keyboards that unplug, re-enumerate, or wake from suspend — common with USB and Bluetooth keyboards — so dictation keeps working without a restart. If you pin a specific device with `[keyboard] device`, only that device is re-attached.
+
 **First run is slow:** The Whisper model is downloaded once on first use (a few hundred MB for `base.en`). Subsequent starts are fast.
 
 **Wrong microphone:** Set `[audio] device` to the device name or index shown by your system's audio settings. Leave it blank for the system default.
