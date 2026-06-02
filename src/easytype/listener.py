@@ -7,8 +7,12 @@ from collections.abc import Callable
 from easytype.chords import HotkeyEngine
 
 
+VIRTUAL_KBD_NAME = "easytype-virtual-kbd"
+
+
 def find_keyboards() -> list:
-    """Devices that look like real keyboards (have letter keys)."""
+    """Devices that look like real keyboards (have letter keys), excluding our own
+    injection device — grabbing that would feed everything we type back into us."""
     from evdev import InputDevice, ecodes, list_devices
 
     keyboards = []
@@ -18,7 +22,7 @@ def find_keyboards() -> list:
         except Exception:
             continue
         keys = dev.capabilities().get(ecodes.EV_KEY, [])
-        if ecodes.KEY_A in keys and ecodes.KEY_Z in keys:
+        if dev.name != VIRTUAL_KBD_NAME and ecodes.KEY_A in keys and ecodes.KEY_Z in keys:
             keyboards.append(dev)
         else:
             dev.close()
@@ -63,7 +67,7 @@ class Listener:
         self._stopping = False
         try:
             if grab:
-                self._ui = UInput.from_device(*self._devices, name="easytype-virtual-kbd")
+                self._ui = UInput.from_device(*self._devices, name=VIRTUAL_KBD_NAME)
                 for d in self._devices:
                     d.grab()
                 self._grabbed = True
@@ -95,7 +99,11 @@ class Listener:
             sel.register(d, selectors.EVENT_READ)
         sel.register(self._stop_r, selectors.EVENT_READ)
         while not self._stopping:
-            for key, _mask in sel.select():
+            ready = sel.select(timeout=1.0)
+            if not ready:
+                self._grab_new_keyboards(sel)   # idle tick: (re)attach keyboards that (re)appeared
+                continue
+            for key, _mask in ready:
                 if key.fd == self._stop_r:
                     return
                 try:
@@ -104,13 +112,12 @@ class Listener:
                     continue
                 except OSError:
                     # The device vanished mid-read (ENODEV on suspend/resume or
-                    # unplug). Drop it and re-acquire keyboards so dictation
-                    # survives instead of the listener thread dying.
+                    # unplug). Drop it; the idle rescan re-grabs the keyboard when
+                    # it returns, so dictation survives instead of the thread dying.
                     dev = key.fileobj
                     print(f"[easytype] keyboard disconnected ({dev.path}); waiting for it to return…")
                     self._drop_device(sel, dev)
-                    self._reconnect(sel)
-                    break
+                    continue
                 for event in events:
                     self._handle(event, ecodes)
 
@@ -126,35 +133,29 @@ class Listener:
         except OSError:
             pass
 
-    def _reconnect(self, sel) -> None:
-        """Re-acquire keyboards after one vanished. Polls so stop() still wakes us,
-        re-grabbing and registering each keyboard we don't already hold. Returns as
-        soon as any device is in hand so a surviving keyboard keeps working."""
+    def _grab_new_keyboards(self, sel) -> None:
+        """Grab and watch any keyboard we don't already hold. Runs on idle so a
+        keyboard that was unplugged, suspended, or re-enumerated is picked up again
+        even while other keyboards keep working — and so the listener never gives up
+        on the keyboard the user actually types on."""
         held = {d.path for d in self._devices}
-        while not self._stopping:
-            try:
-                found = open_devices(self._device_override)
-            except Exception:
-                found = []
-            for d in found:
-                if d.path in held:
+        try:
+            found = open_devices(self._device_override)
+        except Exception:
+            return
+        for d in found:
+            if d.path in held:
+                d.close()
+                continue
+            if self._grabbed:
+                try:
+                    d.grab()
+                except OSError:
                     d.close()
                     continue
-                if self._grabbed:
-                    try:
-                        d.grab()
-                    except OSError:
-                        d.close()
-                        continue
-                self._devices.append(d)
-                held.add(d.path)
-                sel.register(d, selectors.EVENT_READ)
-                print(f"[easytype] keyboard reconnected ({d.path})")
-            if self._devices:
-                return
-            for key, _mask in sel.select(timeout=1.0):
-                if key.fd == self._stop_r:
-                    return
+            self._devices.append(d)
+            sel.register(d, selectors.EVENT_READ)
+            print(f"[easytype] keyboard connected ({d.path})")
 
     def _handle(self, event, ecodes) -> None:
         if self._capture is not None:
