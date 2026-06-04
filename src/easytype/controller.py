@@ -8,6 +8,7 @@ import numpy as np
 from easytype.config import Config, DictEntry
 from easytype.dictionary import apply_dictionary
 from easytype.formatter import format_text
+from easytype.polish import polish_text
 
 
 class Controller:
@@ -126,6 +127,7 @@ class Controller:
         text = self._tx.transcribe(audio)
         text = apply_dictionary(text, self._dict)
         text = format_text(text, self._cfg)
+        text = polish_text(text)
         text = text.strip()
         if self._cancelled:
             self._cancelled = False
