@@ -8,9 +8,10 @@ from easytype.config import Config
 
 PROMPT = (
     "Clean up this dictated text: remove filler words (um, uh, like), keep only the "
-    "final wording when the speaker corrects themselves, and fix punctuation and "
-    "capitalization. Preserve meaning otherwise. Output ONLY the cleaned text — no "
-    "preamble, no explanation, no surrounding quotes.\n\nText:\n"
+    "final wording when the speaker corrects themselves, and fix punctuation. Add "
+    "commas where a natural pause belongs, split run-on sentences with periods, and "
+    "end questions with a question mark. Preserve meaning otherwise. Output ONLY the "
+    "cleaned text — no preamble, no explanation, no surrounding quotes.\n\nText:\n"
 )
 
 

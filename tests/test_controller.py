@@ -44,8 +44,8 @@ def test_pipeline_applies_dictionary_before_inject(tmp_path):
         dictionary=[DictEntry("ops plus", "OPS+", "smart")],
     )
     text = ctrl.process_audio(np.zeros(10, dtype=np.float32))
-    assert text == "OPS+ is ready"
-    assert inj.injected == [("OPS+ is ready", "type")]
+    assert text == "OPS+ is ready."
+    assert inj.injected == [("OPS+ is ready.", "type")]
 
 
 def test_toggle_starts_then_stops(tmp_path):
@@ -55,7 +55,7 @@ def test_toggle_starts_then_stops(tmp_path):
     assert ctrl.state == "recording"
     ctrl.on_record()       # stop → process synchronously in test mode
     assert ctrl.state == "idle"
-    assert inj.injected and inj.injected[0][0] == "ops plus is ready"
+    assert inj.injected and inj.injected[0][0] == "Ops plus is ready."
 
 
 def test_repaste_reinjects_last(tmp_path):
@@ -63,7 +63,7 @@ def test_repaste_reinjects_last(tmp_path):
     ctrl.on_record(); ctrl.on_record()
     inj.injected.clear()
     ctrl.on_repaste()
-    assert inj.injected == [("ops plus is ready", "type")]
+    assert inj.injected == [("Ops plus is ready.", "type")]
 
 
 def test_cancel_during_recording_discards(tmp_path):
@@ -98,7 +98,7 @@ def test_toggle_recording_starts_then_stops(tmp_path):
     assert ctrl.state == "recording"
     ctrl.toggle_recording()                       # synchronous in test mode
     assert ctrl.state == "idle"
-    assert inj.injected and inj.injected[0][0] == "ops plus is ready"
+    assert inj.injected and inj.injected[0][0] == "Ops plus is ready."
 
 
 def test_toggle_recording_noop_while_transcribing(tmp_path):
