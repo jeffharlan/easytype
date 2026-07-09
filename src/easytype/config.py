@@ -28,9 +28,12 @@ description = "F8"
 device = ""                        # "" = default mic
 
 [transcription]
-model = "base.en"
+model = "small.en"                 # tiny.en | base.en | small.en | medium.en | large-v3 (bigger = more accurate, slower)
 language = "en"
 device = "auto"                    # auto | cuda | cpu
+# Vocabulary hint: bias Whisper toward these spellings at the source. Add your
+# proper nouns and jargon here — names, products, acronyms.
+initial_prompt = ""
 
 [injection]
 method = "type"                    # "type" | "paste"
@@ -79,6 +82,7 @@ class Config:
     model: str
     language: str
     transcribe_device: str
+    initial_prompt: str
     injection_method: str
     type_delay_ms: int
     formatter_enabled: bool
@@ -133,9 +137,10 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
         cancel=_hotkey(hk.get("cancel"), [1], "Esc"),
         repaste=_hotkey(hk.get("repaste"), [66], "F8"),
         audio_device=str(audio.get("device", "")),
-        model=str(tr.get("model", "base.en")),
+        model=str(tr.get("model", "small.en")),
         language=str(tr.get("language", "en")),
         transcribe_device=str(tr.get("device", "auto")),
+        initial_prompt=str(tr.get("initial_prompt", "")),
         injection_method=str(inj.get("method", "type")),
         type_delay_ms=int(inj.get("type_delay_ms", 40)),
         formatter_enabled=bool(fmt.get("enabled", False)),
@@ -173,6 +178,7 @@ def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
     tr["model"] = values["model"]
     tr["language"] = values["language"]
     tr["device"] = values["transcribe_device"]
+    tr["initial_prompt"] = values["initial_prompt"]
 
     inj = _table(doc, "injection")
     inj["method"] = values["injection_method"]
