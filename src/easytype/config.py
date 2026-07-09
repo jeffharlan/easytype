@@ -49,6 +49,9 @@ count = "up"                       # "up" | "down"
 
 [keyboard]
 device = ""                        # "" = auto-detect keyboard device(s)
+
+[media]
+pause_while_recording = true       # pause playing media (via playerctl) during capture
 """
 
 
@@ -86,6 +89,7 @@ class Config:
     indicator_position: str
     indicator_count: str
     keyboard_device: str
+    pause_media_while_recording: bool
     dictionary: tuple[DictEntry, ...]
 
 
@@ -117,6 +121,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
     fmt = doc.get("formatter", {})
     ind = doc.get("indicator", {})
     kbd = doc.get("keyboard", {})
+    media = doc.get("media", {})
     entries = tuple(
         DictEntry(str(e["hears"]), str(e["replace"]), str(e.get("mode", "smart")))
         for e in doc.get("dictionary", [])
@@ -141,6 +146,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
         indicator_position=str(ind.get("position", "top-right")),
         indicator_count=str(ind.get("count", "up")),
         keyboard_device=str(kbd.get("device", "")),
+        pause_media_while_recording=bool(media.get("pause_while_recording", True)),
         dictionary=entries,
     )
 
@@ -184,6 +190,8 @@ def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
     ind["count"] = values["indicator_count"]
 
     _table(doc, "keyboard")["device"] = values["keyboard_device"]
+
+    _table(doc, "media")["pause_while_recording"] = bool(values["pause_media_while_recording"])
 
 
 def set_dictionary_in_doc(doc: tomlkit.TOMLDocument, entries: list[tuple[str, str]]) -> None:

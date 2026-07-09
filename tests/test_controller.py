@@ -1,7 +1,15 @@
+from dataclasses import replace
+
 import numpy as np
 
 from easytype.config import load_config, DictEntry
 from easytype.controller import Controller
+
+
+class FakeMedia:
+    def __init__(self): self.events = []
+    def pause(self): self.events.append("pause")
+    def resume(self): self.events.append("resume")
 
 
 class FakeRecorder:
@@ -107,3 +115,38 @@ def test_toggle_recording_noop_while_transcribing(tmp_path):
     ctrl.state = "transcribing"
     ctrl.toggle_recording()                       # must do nothing
     assert ctrl.state == "transcribing"
+
+
+def _build_with_media(tmp_path, media, config=None):
+    c = config or load_config(tmp_path / "c.toml")
+    return Controller(
+        config=c, recorder=FakeRecorder(), transcriber=FakeTranscriber(),
+        injector=FakeInjector(), indicator=FakeIndicator(), notify=lambda *a: None,
+        media=media,
+    )
+
+
+def test_recording_pauses_then_resumes_media(tmp_path):
+    media = FakeMedia()
+    ctrl = _build_with_media(tmp_path, media)
+    ctrl.on_record()                              # start
+    assert media.events == ["pause"]
+    ctrl.on_record()                              # stop → finish synchronously
+    assert media.events == ["pause", "resume"]
+
+
+def test_cancel_resumes_media(tmp_path):
+    media = FakeMedia()
+    ctrl = _build_with_media(tmp_path, media)
+    ctrl.on_record()
+    ctrl.on_cancel()
+    assert media.events == ["pause", "resume"]
+
+
+def test_media_untouched_when_flag_off(tmp_path):
+    media = FakeMedia()
+    c = replace(load_config(tmp_path / "c.toml"), pause_media_while_recording=False)
+    ctrl = _build_with_media(tmp_path, media, config=c)
+    ctrl.on_record()
+    ctrl.on_record()
+    assert media.events == []

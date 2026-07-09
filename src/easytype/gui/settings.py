@@ -110,11 +110,13 @@ class SettingsWindow(QDialog):
         self.record_row = HotkeyRow(self._sup)
         self.cancel_row = HotkeyRow(self._sup)
         self.repaste_row = HotkeyRow(self._sup)
+        self.pause_media = QCheckBox("Pause media while recording")
         form.addRow("Mode", self.capture_mode)
         form.addRow("Max length", self.max_duration)
         form.addRow("Record", self.record_row)
         form.addRow("Cancel", self.cancel_row)
         form.addRow("Repaste", self.repaste_row)
+        form.addRow(self.pause_media)
         return w
 
     def _audio_tab(self):
@@ -220,6 +222,7 @@ class SettingsWindow(QDialog):
         self.record_row.set_value(c.record.keys, c.record.description)
         self.cancel_row.set_value(c.cancel.keys, c.cancel.description)
         self.repaste_row.set_value(c.repaste.keys, c.repaste.description)
+        self.pause_media.setChecked(c.pause_media_while_recording)
         idx = self.audio_device.findData(c.audio_device)
         self.audio_device.setCurrentIndex(idx if idx >= 0 else 0)
         self.model.setCurrentText(c.model)
@@ -262,6 +265,7 @@ class SettingsWindow(QDialog):
             "indicator_position": self.indicator_position.currentText(),
             "indicator_count": self.indicator_count.currentText(),
             "keyboard_device": self.keyboard_device.text(),
+            "pause_media_while_recording": self.pause_media.isChecked(),
         }
 
     def _save(self):

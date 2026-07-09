@@ -18,6 +18,7 @@ def test_load_creates_default_when_missing(tmp_path: Path):
     assert c.formatter_enabled is False
     assert c.indicator_position == "top-right"
     assert c.indicator_count == "up"
+    assert c.pause_media_while_recording is True
 
 
 def test_defaults_round_trip(tmp_path: Path):
@@ -68,6 +69,7 @@ SAMPLE_SETTINGS = {
     "ollama_model": "llama3.1", "ollama_url": "http://localhost:11434",
     "indicator_enabled": False, "indicator_position": "bottom-left", "indicator_count": "down",
     "keyboard_device": "",
+    "pause_media_while_recording": False,
 }
 
 
@@ -88,6 +90,7 @@ def test_apply_settings_round_trips(tmp_path: Path):
     assert c.indicator_enabled is False
     assert c.indicator_position == "bottom-left"
     assert c.indicator_count == "down"
+    assert c.pause_media_while_recording is False
     assert c.record.keys == (29, 43)
     assert c.record.description == "Ctrl+\\"
 
