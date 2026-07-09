@@ -7,11 +7,16 @@ import urllib.request
 from easytype.config import Config
 
 PROMPT = (
-    "Clean up this dictated text: remove filler words (um, uh, like), keep only the "
-    "final wording when the speaker corrects themselves, and fix punctuation. Add "
-    "commas where a natural pause belongs, split run-on sentences with periods, and "
-    "end questions with a question mark. Preserve meaning otherwise. Output ONLY the "
-    "cleaned text — no preamble, no explanation, no surrounding quotes.\n\nText:\n"
+    "You clean up dictated text. Apply ONLY these changes:\n"
+    "- Remove filler words (um, uh, er, like).\n"
+    "- When the speaker corrects themselves mid-thought, keep only the final "
+    "wording and drop the abandoned false start.\n"
+    "- Fix punctuation: add commas at natural pauses, split run-on sentences with "
+    "periods, end questions with a question mark.\n\n"
+    "Hard rules: do NOT drop, summarize, merge, or omit any point the speaker "
+    "actually made. Do NOT add, substitute, or reword content. Do NOT change proper "
+    "nouns or capitalization. If unsure, leave the words as they are. Output ONLY "
+    "the cleaned text — no preamble, no explanation, no surrounding quotes.\n\nText:\n"
 )
 
 
