@@ -39,3 +39,6 @@ count = "up"                       # "up" | "down"
 
 [keyboard]
 device = ""                        # "" = auto-detect keyboard device(s)
+
+[media]
+pause_while_recording = true       # pause playing media (via playerctl) during capture

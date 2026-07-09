@@ -27,6 +27,7 @@ def build_engine(config: Config, session: str,
     from easytype.indicator import create_indicator
     from easytype.injector import get_injector
     from easytype.listener import Listener
+    from easytype.media import MediaController
     from easytype.recorder import Recorder
     from easytype.transcriber import Transcriber
 
@@ -38,6 +39,7 @@ def build_engine(config: Config, session: str,
         injector=get_injector(session, config.type_delay_ms),
         indicator=create_indicator(config),
         notify=notify,
+        media=MediaController(),
         synchronous=False,
     )
     engine = HotkeyEngine({

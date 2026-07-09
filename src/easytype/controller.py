@@ -15,12 +15,14 @@ class Controller:
     def __init__(self, *, config: Config, recorder, transcriber, injector, indicator,
                  notify: Callable[[str, str], None],
                  dictionary: Sequence[DictEntry] | None = None,
+                 media=None,
                  synchronous: bool = True):
         self._cfg = config
         self._rec = recorder
         self._tx = transcriber
         self._inj = injector
         self._ind = indicator
+        self._media = media
         self._notify = notify
         self._dict = list(dictionary if dictionary is not None else config.dictionary)
         self._sync = synchronous  # tests run inline; real runtime sets False
@@ -58,6 +60,7 @@ class Controller:
             if self.state == "recording":
                 self._cancel_timer()
                 self._rec.stop()
+                self._resume_media()
                 self._ind.stop()
                 self.state = "idle"
                 self._notify("EasyType", "Recording cancelled")
@@ -77,9 +80,18 @@ class Controller:
                 self._stop_and_process()
 
     # --- internals ----------------------------------------------------------
+    def _pause_media(self) -> None:
+        if self._media and self._cfg.pause_media_while_recording:
+            self._media.pause()
+
+    def _resume_media(self) -> None:
+        if self._media and self._cfg.pause_media_while_recording:
+            self._media.resume()
+
     def _start(self) -> None:
         self._cancelled = False
         self.state = "recording"
+        self._pause_media()
         self._rec.start()
         self._ind.start(self._cfg.max_recording_duration)
         self._notify("EasyType", "Recording…")
@@ -116,6 +128,7 @@ class Controller:
         # Runs on a worker thread in the real app so the keyboard event loop never blocks.
         self._ind.stop()
         audio = self._rec.stop()
+        self._resume_media()
         print("[easytype] transcribing…")
         text = self.process_audio(audio)
         with self._lock:
