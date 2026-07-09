@@ -128,10 +128,13 @@ class SettingsWindow(QDialog):
         self.model = QComboBox(); self.model.setEditable(True); self.model.addItems(MODELS)
         self.language = QComboBox(); self.language.setEditable(True); self.language.addItems(LANGS)
         self.transcribe_device = QComboBox(); self.transcribe_device.addItems(COMPUTE)
+        self.initial_prompt = QLineEdit()
+        self.initial_prompt.setPlaceholderText("Names, products, acronyms — biases spelling, e.g. Claude Code, CrewNexus, Axis")
         form.addRow("Microphone", self.audio_device)
         form.addRow("Model", self.model)
         form.addRow("Language", self.language)
         form.addRow("Compute", self.transcribe_device)
+        form.addRow("Vocabulary hint", self.initial_prompt)
         return w
 
     def _typing_tab(self):
@@ -228,6 +231,7 @@ class SettingsWindow(QDialog):
         self.model.setCurrentText(c.model)
         self.language.setCurrentText(c.language)
         self.transcribe_device.setCurrentText(c.transcribe_device)
+        self.initial_prompt.setText(c.initial_prompt)
         self.injection_method.setCurrentText(c.injection_method)
         self.type_delay.setValue(c.type_delay_ms)
         self.formatter_enabled.setChecked(c.formatter_enabled)
@@ -255,6 +259,7 @@ class SettingsWindow(QDialog):
             "model": self.model.currentText(),
             "language": self.language.currentText(),
             "transcribe_device": self.transcribe_device.currentText(),
+            "initial_prompt": self.initial_prompt.text(),
             "injection_method": self.injection_method.currentText(),
             "type_delay_ms": self.type_delay.value(),
             "formatter_enabled": self.formatter_enabled.isChecked(),

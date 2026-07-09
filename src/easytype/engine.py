@@ -31,7 +31,8 @@ def build_engine(config: Config, session: str,
     from easytype.recorder import Recorder
     from easytype.transcriber import Transcriber
 
-    transcriber = Transcriber(config.model, config.language, config.transcribe_device)
+    transcriber = Transcriber(config.model, config.language, config.transcribe_device,
+                              initial_prompt=config.initial_prompt)
     controller = Controller(
         config=config,
         recorder=Recorder(config.audio_device),

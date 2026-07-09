@@ -29,6 +29,24 @@ def test_defaults_round_trip(tmp_path: Path):
     assert again.dictionary == ()
 
 
+def test_initial_prompt_defaults_empty(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    c = cfg.load_config(path)
+    assert c.initial_prompt == ""
+
+
+def test_initial_prompt_parsed(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    path.write_text(
+        "[transcription]\n"
+        'model = "small.en"\n'
+        'initial_prompt = "Claude Code, CrewNexus, ConnectWise, Axis, Milestone"\n'
+    )
+    c = cfg.load_config(path)
+    assert c.model == "small.en"
+    assert c.initial_prompt == "Claude Code, CrewNexus, ConnectWise, Axis, Milestone"
+
+
 def test_dictionary_entries_parsed(tmp_path: Path):
     path = tmp_path / "config.toml"
     path.write_text(
@@ -64,6 +82,7 @@ SAMPLE_SETTINGS = {
     "repaste_keys": [66], "repaste_description": "F8",
     "audio_device": "",
     "model": "small.en", "language": "en", "transcribe_device": "cuda",
+    "initial_prompt": "Claude Code, CrewNexus",
     "injection_method": "paste", "type_delay_ms": 25,
     "formatter_enabled": True, "formatter_backend": "ollama",
     "ollama_model": "llama3.1", "ollama_url": "http://localhost:11434",

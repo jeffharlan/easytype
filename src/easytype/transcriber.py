@@ -8,10 +8,12 @@ def resolve_compute_type(device: str) -> str:
 
 
 class Transcriber:
-    def __init__(self, model: str = "base.en", language: str = "en", device: str = "auto"):
+    def __init__(self, model: str = "base.en", language: str = "en", device: str = "auto",
+                 initial_prompt: str = ""):
         self._model_name = model
         self._language = language
         self._device = device
+        self._initial_prompt = initial_prompt
         self._model = None
 
     def _ensure_model(self):
@@ -35,5 +37,8 @@ class Transcriber:
         if audio.size == 0:
             return ""
         model = self._ensure_model()
-        segments, _info = model.transcribe(audio, language=self._language, beam_size=5)
+        segments, _info = model.transcribe(
+            audio, language=self._language, beam_size=5,
+            initial_prompt=self._initial_prompt or None,
+        )
         return "".join(seg.text for seg in segments).strip()
