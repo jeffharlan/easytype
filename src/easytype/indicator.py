@@ -1,18 +1,24 @@
 from __future__ import annotations
 
+import queue
 import subprocess
 import sys
+import textwrap
+import threading
 
 from easytype.config import Config
 
 WARN_WINDOW_S = 5
 PILL_W, PILL_H, MARGIN = 150, 44, 24
+CAPTION_W, CAPTION_LINES, CAPTION_CHARS = 420, 4, 52
+CAPTION_LINE_H = 18
 
 
-def _position_xy(position: str, sw: int, sh: int) -> tuple[int, int]:
-    cx = (sw - PILL_W) // 2
-    right = sw - PILL_W - MARGIN
-    bottom = sh - PILL_H - MARGIN * 2
+def _position_xy(position: str, sw: int, sh: int,
+                 w: int = PILL_W, h: int = PILL_H) -> tuple[int, int]:
+    cx = (sw - w) // 2
+    right = sw - w - MARGIN
+    bottom = sh - h - MARGIN * 2
     return {
         "top-left": (MARGIN, MARGIN),
         "top-center": (cx, MARGIN),
@@ -31,6 +37,14 @@ def should_warn(elapsed: int, cap: int) -> bool:
     return cap > 0 and elapsed >= cap - WARN_WINDOW_S
 
 
+def wrap_tail(text: str, width: int, max_lines: int) -> list[str]:
+    """Wrapped text, keeping only the last max_lines — the box reads as scrolling
+    captions, with the oldest words falling off the top."""
+    if not text.strip():
+        return []
+    return textwrap.wrap(text, width)[-max_lines:]
+
+
 def _tk_available() -> bool:
     try:
         import tkinter  # noqa: F401
@@ -44,6 +58,7 @@ class NullIndicator:
 
     def start(self, cap: int) -> None: ...
     def stop(self) -> None: ...
+    def caption(self, text: str) -> None: ...
 
 
 class ProcessIndicator:
@@ -60,8 +75,23 @@ class ProcessIndicator:
     def start(self, cap: int) -> None:
         self._proc = subprocess.Popen(
             [sys.executable, "-m", "easytype.indicator", self._position, self._count, str(cap)],
+            stdin=subprocess.PIPE, text=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
+
+    def caption(self, text: str) -> None:
+        """Push preview text to the pill. Whitespace is collapsed so one caption
+        is always exactly one line — the pill re-wraps for display anyway, so the
+        original breaks carry no information and no escaping scheme is needed.
+        Captions are advisory: if the pill has already exited (e.g. the cap timer
+        fired), the write is dropped."""
+        if self._proc is None or self._proc.stdin is None:
+            return
+        try:
+            self._proc.stdin.write(" ".join(text.split()) + "\n")
+            self._proc.stdin.flush()
+        except (BrokenPipeError, ValueError, OSError):
+            pass
 
     def stop(self) -> None:
         if self._proc is not None:
