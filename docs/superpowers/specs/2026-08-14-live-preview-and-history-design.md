@@ -106,9 +106,10 @@ constructed in `engine.py`.
 ### `src/easytype/indicator.py`
 
 - `ProcessIndicator.start()` passes `stdin=subprocess.PIPE`.
-- New `ProcessIndicator.caption(text)` — writes one newline-delimited record and
-  flushes. Literal newlines in the text become `\n` (backslash-n) on the way out
-  and are restored by the pill on the way in, so one caption is always one line.
+- New `ProcessIndicator.caption(text)` — collapses all whitespace runs to single
+  spaces (so one caption is always exactly one line, with no escaping scheme to
+  get wrong on either side), writes it, and flushes. The pill re-wraps the text
+  for display anyway, so the original line breaks carry no information.
   A `BrokenPipeError`/`ValueError` (pill already exited, e.g. the cap timer fired)
   is swallowed — captions are advisory.
 - `NullIndicator.caption(text)` — no-op, keeping the two interchangeable.
@@ -216,15 +217,18 @@ constructed in `engine.py`.
   - Keeps exactly `HISTORY_LIMIT`, newest first, dropping the oldest.
   - Empty/whitespace text is ignored.
   - `read` on a missing file returns `[]`; on a malformed file returns `[]`.
-  - Multi-line and delimiter-lookalike text round-trips without corrupting
-    neighbouring entries.
+  - Multi-line text round-trips intact.
+  - `menu_label` truncates, collapses newlines, and doubles `&` so Qt does not
+    read it as a menu mnemonic.
 - `test_preview.py` (fake recorder/transcriber/indicator)
-  - Publishes a caption from a snapshot.
-  - Passes never overlap — the transcriber sees no re-entrant call.
+  - A pass transcribes the snapshot and publishes the result as a caption.
   - Audio shorter than `MIN_PREVIEW_SECONDS` is skipped without transcribing.
-  - After `stop()`, no further captions are published even if a pass was in
-    flight.
-  - A transcriber exception does not kill the loop.
+  - A pass that completes after `stop()` publishes nothing.
+  - A transcriber exception is swallowed, so the loop survives it.
+  - `start()` then `stop()` leaves no live thread behind.
+
+  Passes cannot overlap by construction — the loop calls them sequentially — so
+  there is no test for it; asserting it would only be testing Python.
 - `test_recorder.py` (new file — the recorder has no tests today)
   - `snapshot` returns accumulated frames without stopping the stream, and
     `stop` afterwards still returns the full audio.
@@ -285,6 +289,11 @@ setting.
 - **Two models resident in VRAM.** ~75 MB extra at the default. Worth watching
   only if the main model is raised to `medium.en` or larger while Ollama is
   also loaded.
+- **A transcript containing a line that looks exactly like a history delimiter**
+  (`--- YYYY-MM-DD HH:MM:SS ---`, alone on its line) would be read back as two
+  entries. Whisper does not emit that shape, and the file is personal dictation
+  history, so the plain-text format is kept for readability rather than hardened
+  against it.
 
 ## Follow-up (not code)
 
