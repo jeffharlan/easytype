@@ -22,53 +22,53 @@ class FakeTranscriber:
         return self.text
 
 
-class FakeIndicator:
+class Collector:
     def __init__(self):
-        self.captions = []
+        self.texts = []
 
-    def caption(self, text):
-        self.captions.append(text)
+    def __call__(self, text):
+        self.texts.append(text)
 
 
-def _worker(recorder=None, transcriber=None, indicator=None):
+def _worker(recorder=None, transcriber=None, on_text=None):
     return PreviewWorker(
         recorder or FakeRecorder(),
         transcriber or FakeTranscriber(),
-        indicator or FakeIndicator(),
+        on_text or Collector(),
         interval=0.01,
     )
 
 
-def test_a_pass_captions_the_transcribed_snapshot():
-    ind = FakeIndicator()
-    worker = _worker(indicator=ind)
+def test_a_pass_publishes_the_transcribed_snapshot():
+    sink = Collector()
+    worker = _worker(on_text=sink)
     worker._pass()
-    assert ind.captions == ["preview text"]
+    assert sink.texts == ["preview text"]
 
 
 def test_audio_below_the_minimum_is_not_transcribed():
     tx = FakeTranscriber()
-    ind = FakeIndicator()
+    sink = Collector()
     worker = _worker(recorder=FakeRecorder(seconds=MIN_PREVIEW_SECONDS / 2),
-                     transcriber=tx, indicator=ind)
+                     transcriber=tx, on_text=sink)
     worker._pass()
     assert tx.calls == 0
-    assert ind.captions == []
+    assert sink.texts == []
 
 
-def test_empty_transcript_is_not_captioned():
-    ind = FakeIndicator()
-    worker = _worker(transcriber=FakeTranscriber(text="   "), indicator=ind)
+def test_empty_transcript_is_not_published():
+    sink = Collector()
+    worker = _worker(transcriber=FakeTranscriber(text="   "), on_text=sink)
     worker._pass()
-    assert ind.captions == []
+    assert sink.texts == []
 
 
 def test_a_pass_finishing_after_stop_publishes_nothing():
-    ind = FakeIndicator()
-    worker = _worker(indicator=ind)
+    sink = Collector()
+    worker = _worker(on_text=sink)
     worker.stop()          # a pass already in flight must not publish its result
     worker._pass()
-    assert ind.captions == []
+    assert sink.texts == []
 
 
 def test_a_transcriber_failure_does_not_propagate():
