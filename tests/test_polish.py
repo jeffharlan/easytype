@@ -1,4 +1,29 @@
-from easytype.polish import polish_text
+from easytype.polish import polish_stream, polish_text
+
+
+def test_polish_stream_adds_no_closing_period():
+    assert polish_stream("check the camera counts") == "Check the camera counts"
+
+
+def test_polish_stream_preserves_a_trailing_space():
+    assert polish_stream("check the camera ") == "Check the camera "
+
+
+def test_polish_stream_capitalizes_sentence_starts_and_standalone_i():
+    assert polish_stream("i said hello. then i left") == "I said hello. Then I left"
+
+
+def test_polish_stream_is_prefix_stable_over_whole_words():
+    full = "i said hello. then i left the site"
+    whole = polish_stream(full)
+    words = full.split(" ")
+    for i in range(1, len(words)):
+        prefix = " ".join(words[:i]) + " "
+        assert whole.startswith(polish_stream(prefix)), f"broke at {prefix!r}"
+
+
+def test_polish_stream_on_empty_text():
+    assert polish_stream("   ") == "   "
 
 
 def test_capitalizes_first_letter():
