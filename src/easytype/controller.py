@@ -15,7 +15,7 @@ from easytype.polish import polish_text
 # How long the on-screen box stays up showing the finished transcript before the
 # text is injected. The last words spoken never make it into a mid-recording pass,
 # so without this the box never shows the end of what you said.
-FINAL_HOLD_S = 2.0
+FINAL_HOLD_S = 1.0
 
 
 class Controller:
