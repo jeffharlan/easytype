@@ -45,3 +45,7 @@ pause_while_recording = true       # pause playing media (via playerctl) during 
 
 [history]
 enabled = true                     # keep the last 5 transcripts in ~/.local/share/easytype/history.txt
+
+[preview]
+enabled = true                     # show a running transcript while you speak
+model = "tiny.en"                  # "" = reuse the transcription model (exact, but slower)

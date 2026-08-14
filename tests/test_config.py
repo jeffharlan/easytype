@@ -20,6 +20,8 @@ def test_load_creates_default_when_missing(tmp_path: Path):
     assert c.indicator_count == "up"
     assert c.pause_media_while_recording is True
     assert c.history_enabled is True
+    assert c.preview_enabled is True
+    assert c.preview_model == "tiny.en"
 
 
 def test_defaults_round_trip(tmp_path: Path):
@@ -91,6 +93,8 @@ SAMPLE_SETTINGS = {
     "keyboard_device": "",
     "pause_media_while_recording": False,
     "history_enabled": False,
+    "preview_enabled": False,
+    "preview_model": "base.en",
 }
 
 
@@ -113,6 +117,8 @@ def test_apply_settings_round_trips(tmp_path: Path):
     assert c.indicator_count == "down"
     assert c.pause_media_while_recording is False
     assert c.history_enabled is False
+    assert c.preview_enabled is False
+    assert c.preview_model == "base.en"
     assert c.record.keys == (29, 43)
     assert c.record.description == "Ctrl+\\"
 
@@ -121,6 +127,13 @@ def test_history_enabled_parsed(tmp_path: Path):
     path = tmp_path / "config.toml"
     path.write_text("[history]\nenabled = false\n")
     assert cfg.load_config(path).history_enabled is False
+
+
+def test_blank_preview_model_is_preserved(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    path.write_text('[preview]\nenabled = true\nmodel = ""\n')
+    c = cfg.load_config(path)
+    assert c.preview_model == ""
 
 
 def test_apply_settings_preserves_comments(tmp_path: Path):

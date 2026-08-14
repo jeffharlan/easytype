@@ -28,19 +28,34 @@ def build_engine(config: Config, session: str,
     from easytype.injector import get_injector
     from easytype.listener import Listener
     from easytype.media import MediaController
+    from easytype.preview import PreviewWorker
     from easytype.recorder import Recorder
     from easytype.transcriber import Transcriber
 
     transcriber = Transcriber(config.model, config.language, config.transcribe_device,
                               initial_prompt=config.initial_prompt)
+    recorder = Recorder(config.audio_device)
+    indicator = create_indicator(config)
+
+    preview = None
+    preview_transcriber = None
+    # No indicator means nowhere to draw, so preview is skipped regardless of the flag.
+    if config.preview_enabled and not indicator.is_null:
+        preview_transcriber = Transcriber(
+            config.preview_model or config.model, config.language,
+            config.transcribe_device, initial_prompt=config.initial_prompt,
+        )
+        preview = PreviewWorker(recorder, preview_transcriber, indicator)
+
     controller = Controller(
         config=config,
-        recorder=Recorder(config.audio_device),
+        recorder=recorder,
         transcriber=transcriber,
         injector=get_injector(session, config.type_delay_ms),
-        indicator=create_indicator(config),
+        indicator=indicator,
         notify=notify,
         media=MediaController(),
+        preview=preview,
         synchronous=False,
     )
     engine = HotkeyEngine({
@@ -59,5 +74,10 @@ def build_engine(config: Config, session: str,
         elif outcome.pressed == "repaste":
             controller.on_repaste()
 
+    def warmup():
+        transcriber.warmup()
+        if preview_transcriber is not None:
+            preview_transcriber.warmup()
+
     listener = Listener(engine, controller.enabled_names, on_event)
-    return EngineBundle(listener=listener, controller=controller, warmup=transcriber.warmup)
+    return EngineBundle(listener=listener, controller=controller, warmup=warmup)
