@@ -127,6 +127,19 @@ mkdir -p ~/.config/autostart
 cp autostart/easytype.desktop ~/.config/autostart/
 ```
 
+## Recent transcripts
+
+The last five completed transcripts are kept in `~/.local/share/easytype/history.txt`, newest first, as plain text you can open in any editor:
+
+```
+--- 2026-08-14 09:12:33 ---
+So what I need you to do is check the camera counts at the Louisville site.
+```
+
+The tray menu's **Recent** submenu lists them. Click one to copy the full text to the clipboard; **Open history file…** opens the raw file.
+
+Cancelled recordings are never saved. To turn the whole thing off — it does write everything you dictate to disk — untick **Keep the last 5 transcriptions** in Settings → Advanced.
+
 ## Configuration
 
 The config file is created automatically at `~/.config/easytype/config.toml` on first run. A fully-commented reference copy is at `config.sample.toml` in this repository.
