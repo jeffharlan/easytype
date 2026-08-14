@@ -18,6 +18,7 @@ class Controller:
                  dictionary: Sequence[DictEntry] | None = None,
                  media=None,
                  preview=None,
+                 live=None,
                  synchronous: bool = True):
         self._cfg = config
         self._rec = recorder
@@ -26,6 +27,7 @@ class Controller:
         self._ind = indicator
         self._media = media
         self._preview = preview
+        self._live = live
         self._notify = notify
         self._dict = list(dictionary if dictionary is not None else config.dictionary)
         self._sync = synchronous  # tests run inline; real runtime sets False
@@ -63,6 +65,8 @@ class Controller:
             if self.state == "recording":
                 self._cancel_timer()
                 self._stop_preview()
+                if self._live:
+                    self._live.undo()
                 self._rec.stop()
                 self._resume_media()
                 self._ind.stop()
@@ -101,6 +105,8 @@ class Controller:
         self.state = "recording"
         self._pause_media()
         self._rec.start()
+        if self._live:
+            self._live.start()      # capture the window before any transcript lands
         if self._preview:
             self._preview.start()
         self._ind.start(self._cfg.max_recording_duration)
@@ -159,7 +165,10 @@ class Controller:
         if text:
             self.last_transcript = text
             self._record_history(text)
-            self._inj.inject(text, self._cfg.injection_method)
+            if self._live and self._live.active:
+                self._live.finish(text)
+            else:
+                self._inj.inject(text, self._cfg.injection_method)
         return text
 
     def _record_history(self, text: str) -> None:
