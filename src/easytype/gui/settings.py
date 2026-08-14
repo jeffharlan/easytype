@@ -208,9 +208,11 @@ class SettingsWindow(QDialog):
     def _advanced_tab(self):
         w = QWidget(); form = QFormLayout(w)
         self.start_on_login = QCheckBox("Start EasyType automatically when you log in")
+        self.history_enabled = QCheckBox("Keep the last 5 transcriptions")
         self.keyboard_device = QLineEdit()
         self.keyboard_device.setPlaceholderText("blank = auto-detect")
         form.addRow(self.start_on_login)
+        form.addRow(self.history_enabled)
         form.addRow("Keyboard device", self.keyboard_device)
         return w
 
@@ -242,6 +244,7 @@ class SettingsWindow(QDialog):
         self.indicator_position.setCurrentText(c.indicator_position)
         self.indicator_count.setCurrentText(c.indicator_count)
         self.keyboard_device.setText(c.keyboard_device)
+        self.history_enabled.setChecked(c.history_enabled)
         self.start_on_login.setChecked(autostart.is_enabled())
         self.dict_table.setRowCount(0)
         for entry in c.dictionary:
@@ -271,6 +274,7 @@ class SettingsWindow(QDialog):
             "indicator_count": self.indicator_count.currentText(),
             "keyboard_device": self.keyboard_device.text(),
             "pause_media_while_recording": self.pause_media.isChecked(),
+            "history_enabled": self.history_enabled.isChecked(),
         }
 
     def _save(self):

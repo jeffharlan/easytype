@@ -55,6 +55,9 @@ device = ""                        # "" = auto-detect keyboard device(s)
 
 [media]
 pause_while_recording = true       # pause playing media (via playerctl) during capture
+
+[history]
+enabled = true                     # keep the last 5 transcripts in ~/.local/share/easytype/history.txt
 """
 
 
@@ -94,6 +97,7 @@ class Config:
     indicator_count: str
     keyboard_device: str
     pause_media_while_recording: bool
+    history_enabled: bool
     dictionary: tuple[DictEntry, ...]
 
 
@@ -126,6 +130,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
     ind = doc.get("indicator", {})
     kbd = doc.get("keyboard", {})
     media = doc.get("media", {})
+    hist = doc.get("history", {})
     entries = tuple(
         DictEntry(str(e["hears"]), str(e["replace"]), str(e.get("mode", "smart")))
         for e in doc.get("dictionary", [])
@@ -152,6 +157,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
         indicator_count=str(ind.get("count", "up")),
         keyboard_device=str(kbd.get("device", "")),
         pause_media_while_recording=bool(media.get("pause_while_recording", True)),
+        history_enabled=bool(hist.get("enabled", True)),
         dictionary=entries,
     )
 
@@ -198,6 +204,8 @@ def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
     _table(doc, "keyboard")["device"] = values["keyboard_device"]
 
     _table(doc, "media")["pause_while_recording"] = bool(values["pause_media_while_recording"])
+
+    _table(doc, "history")["enabled"] = bool(values["history_enabled"])
 
 
 def set_dictionary_in_doc(doc: tomlkit.TOMLDocument, entries: list[tuple[str, str]]) -> None:
