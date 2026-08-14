@@ -5,12 +5,14 @@ import signal
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QRectF
-from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QFont, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtCore import Qt, QTimer, QRectF, QUrl
+from PySide6.QtGui import (
+    QAction, QBrush, QColor, QCursor, QDesktopServices, QFont, QIcon, QPainter, QPen, QPixmap,
+)
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
-from easytype import preflight
+from easytype import history, preflight
 from easytype.config import load_config, load_doc, save_doc
 from easytype.supervisor import EngineSupervisor
 
@@ -106,6 +108,10 @@ class TrayApp:
         menu.addAction(self._mode_action)
         menu.addSeparator()
 
+        self._recent_menu = QMenu("Recent", menu)
+        self._recent_menu.aboutToShow.connect(self._fill_recent)
+        menu.addMenu(self._recent_menu)
+
         settings = QAction("Settings…", menu)
         settings.triggered.connect(self._open_settings)
         menu.addAction(settings)
@@ -146,6 +152,31 @@ class TrayApp:
         self._settings_window.show()
         self._settings_window.raise_()
         self._settings_window.activateWindow()
+
+    def _fill_recent(self):
+        # Rebuilt on every open: the engine writes history from another thread,
+        # so a menu built once at startup would go stale immediately.
+        self._recent_menu.clear()
+        entries = history.read()
+        if not entries:
+            empty = QAction("No recent transcriptions", self._recent_menu)
+            empty.setEnabled(False)
+            self._recent_menu.addAction(empty)
+        for entry in entries:
+            action = QAction(history.menu_label(entry.text), self._recent_menu)
+            action.triggered.connect(
+                lambda _checked=False, text=entry.text: self._copy_to_clipboard(text)
+            )
+            self._recent_menu.addAction(action)
+        self._recent_menu.addSeparator()
+        open_file = QAction("Open history file…", self._recent_menu)
+        open_file.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(history.HISTORY_PATH)))
+        )
+        self._recent_menu.addAction(open_file)
+
+    def _copy_to_clipboard(self, text: str):
+        self._app.clipboard().setText(text)
 
     def _after_save(self):
         self._mode = str(load_config().capture_mode)

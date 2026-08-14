@@ -153,45 +153,35 @@ def test_media_untouched_when_flag_off(tmp_path):
     assert media.events == []
 
 
-def _build_with_history(tmp_path, monkeypatch, config=None):
-    """Point the history module at a temp file so tests never touch the real one."""
-    hist_path = tmp_path / "history.txt"
-    monkeypatch.setattr(history, "HISTORY_PATH", hist_path)
-    c = config or load_config(tmp_path / "c.toml")
-    inj = FakeInjector()
-    ctrl = Controller(
-        config=c, recorder=FakeRecorder(), transcriber=FakeTranscriber(),
-        injector=inj, indicator=FakeIndicator(), notify=lambda *a: None,
-    )
-    return ctrl, inj, hist_path
-
-
-def test_successful_transcript_is_written_to_history(tmp_path, monkeypatch):
-    ctrl, _, hist_path = _build_with_history(tmp_path, monkeypatch)
+def test_successful_transcript_is_written_to_history(tmp_path, history_file):
+    ctrl, _ = build(tmp_path)
     ctrl.on_record()
     ctrl.on_record()
-    assert [e.text for e in history.read(hist_path)] == ["Ops plus is ready."]
+    assert [e.text for e in history.read(history_file)] == ["Ops plus is ready."]
 
 
-def test_cancelled_transcript_is_not_written_to_history(tmp_path, monkeypatch):
-    ctrl, _, hist_path = _build_with_history(tmp_path, monkeypatch)
+def test_cancelled_transcript_is_not_written_to_history(tmp_path, history_file):
+    ctrl, _ = build(tmp_path)
     ctrl.on_record()
     ctrl.state = "transcribing"
     ctrl.on_cancel()
     ctrl.process_audio(np.zeros(10, dtype=np.float32))
-    assert history.read(hist_path) == []
+    assert history.read(history_file) == []
 
 
-def test_history_not_written_when_flag_off(tmp_path, monkeypatch):
+def test_history_not_written_when_flag_off(tmp_path, history_file):
     c = replace(load_config(tmp_path / "c.toml"), history_enabled=False)
-    ctrl, _, hist_path = _build_with_history(tmp_path, monkeypatch, config=c)
+    ctrl = Controller(
+        config=c, recorder=FakeRecorder(), transcriber=FakeTranscriber(),
+        injector=FakeInjector(), indicator=FakeIndicator(), notify=lambda *a: None,
+    )
     ctrl.on_record()
     ctrl.on_record()
-    assert history.read(hist_path) == []
+    assert history.read(history_file) == []
 
 
 def test_history_failure_still_injects(tmp_path, monkeypatch):
-    ctrl, inj, _ = _build_with_history(tmp_path, monkeypatch)
+    ctrl, inj = build(tmp_path)
 
     def boom(*a, **kw):
         raise OSError("disk full")
