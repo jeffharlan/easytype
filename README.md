@@ -127,6 +127,20 @@ mkdir -p ~/.config/autostart
 cp autostart/easytype.desktop ~/.config/autostart/
 ```
 
+## Live preview
+
+While you speak, the on-screen indicator shows a running transcript of what has been captured so far, so you can see how the dictation is going without stopping.
+
+The preview is **display only** — nothing is typed until you stop, and the text that finally lands comes from the normal full-quality pass over the whole clip, not from the preview. Because the preview runs on a smaller, faster model, it can occasionally show a word that comes out differently when typed.
+
+Settings → Indicator has the controls, or in `config.toml`:
+
+    [preview]
+    enabled = true
+    model = "tiny.en"    # "" = reuse the transcription model
+
+Setting `model = ""` makes the preview exact, at the cost of it falling behind your voice on longer dictations. Preview draws inside the on-screen indicator, so it does nothing when the indicator is disabled.
+
 ## Recent transcripts
 
 The last five completed transcripts are kept in `~/.local/share/easytype/history.txt`, newest first, as plain text you can open in any editor:
