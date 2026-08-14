@@ -62,6 +62,7 @@ enabled = true                     # keep the last 5 transcripts in ~/.local/sha
 [preview]
 enabled = true                     # show a running transcript while you speak
 model = "tiny.en"                  # "" = reuse the transcription model (exact, but slower)
+inject_live = false                # type settled words into the focused app as you speak
 """
 
 
@@ -104,6 +105,7 @@ class Config:
     history_enabled: bool
     preview_enabled: bool
     preview_model: str
+    inject_live: bool
     dictionary: tuple[DictEntry, ...]
 
 
@@ -167,6 +169,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
         history_enabled=bool(hist.get("enabled", True)),
         preview_enabled=bool(prev.get("enabled", True)),
         preview_model=str(prev.get("model", "tiny.en")),
+        inject_live=bool(prev.get("inject_live", False)),
         dictionary=entries,
     )
 
@@ -219,6 +222,7 @@ def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
     prev = _table(doc, "preview")
     prev["enabled"] = bool(values["preview_enabled"])
     prev["model"] = values["preview_model"]
+    prev["inject_live"] = bool(values["inject_live"])
 
 
 def set_dictionary_in_doc(doc: tomlkit.TOMLDocument, entries: list[tuple[str, str]]) -> None:

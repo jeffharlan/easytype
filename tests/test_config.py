@@ -22,6 +22,7 @@ def test_load_creates_default_when_missing(tmp_path: Path):
     assert c.history_enabled is True
     assert c.preview_enabled is True
     assert c.preview_model == "tiny.en"
+    assert c.inject_live is False
 
 
 def test_defaults_round_trip(tmp_path: Path):
@@ -95,6 +96,7 @@ SAMPLE_SETTINGS = {
     "history_enabled": False,
     "preview_enabled": False,
     "preview_model": "base.en",
+    "inject_live": True,
 }
 
 
@@ -119,6 +121,7 @@ def test_apply_settings_round_trips(tmp_path: Path):
     assert c.history_enabled is False
     assert c.preview_enabled is False
     assert c.preview_model == "base.en"
+    assert c.inject_live is True
     assert c.record.keys == (29, 43)
     assert c.record.description == "Ctrl+\\"
 

@@ -174,8 +174,15 @@ class SettingsWindow(QDialog):
         form.addRow(self.indicator_enabled)
         form.addRow("Position", self.indicator_position)
         form.addRow("Count", self.indicator_count)
+        self.inject_live = QCheckBox("Type text into the app as I speak (experimental)")
+        self.inject_live.setToolTip(
+            "Words are typed into whatever window you started dictating in, about "
+            "two seconds behind your voice. Uses your main transcription model, "
+            "ignoring the preview model above. Not available while AI cleanup is on."
+        )
         form.addRow(self.preview_enabled)
         form.addRow("Preview model", self.preview_model)
+        form.addRow(self.inject_live)
         return w
 
     def _dictionary_tab(self):
@@ -255,6 +262,7 @@ class SettingsWindow(QDialog):
         self.indicator_count.setCurrentText(c.indicator_count)
         self.preview_enabled.setChecked(c.preview_enabled)
         self.preview_model.setCurrentText(c.preview_model)
+        self.inject_live.setChecked(c.inject_live)
         self.keyboard_device.setText(c.keyboard_device)
         self.history_enabled.setChecked(c.history_enabled)
         self.start_on_login.setChecked(autostart.is_enabled())
@@ -286,6 +294,7 @@ class SettingsWindow(QDialog):
             "indicator_count": self.indicator_count.currentText(),
             "preview_enabled": self.preview_enabled.isChecked(),
             "preview_model": self.preview_model.currentText(),
+            "inject_live": self.inject_live.isChecked(),
             "keyboard_device": self.keyboard_device.text(),
             "pause_media_while_recording": self.pause_media.isChecked(),
             "history_enabled": self.history_enabled.isChecked(),

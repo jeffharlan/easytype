@@ -49,3 +49,4 @@ enabled = true                     # keep the last 5 transcripts in ~/.local/sha
 [preview]
 enabled = true                     # show a running transcript while you speak
 model = "tiny.en"                  # "" = reuse the transcription model (exact, but slower)
+inject_live = false                # type settled words into the focused app as you speak
