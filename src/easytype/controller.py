@@ -17,6 +17,7 @@ class Controller:
                  notify: Callable[[str, str], None],
                  dictionary: Sequence[DictEntry] | None = None,
                  media=None,
+                 preview=None,
                  synchronous: bool = True):
         self._cfg = config
         self._rec = recorder
@@ -24,6 +25,7 @@ class Controller:
         self._inj = injector
         self._ind = indicator
         self._media = media
+        self._preview = preview
         self._notify = notify
         self._dict = list(dictionary if dictionary is not None else config.dictionary)
         self._sync = synchronous  # tests run inline; real runtime sets False
@@ -60,6 +62,7 @@ class Controller:
         with self._lock:
             if self.state == "recording":
                 self._cancel_timer()
+                self._stop_preview()
                 self._rec.stop()
                 self._resume_media()
                 self._ind.stop()
@@ -89,11 +92,17 @@ class Controller:
         if self._media and self._cfg.pause_media_while_recording:
             self._media.resume()
 
+    def _stop_preview(self) -> None:
+        if self._preview:
+            self._preview.stop()
+
     def _start(self) -> None:
         self._cancelled = False
         self.state = "recording"
         self._pause_media()
         self._rec.start()
+        if self._preview:
+            self._preview.start()
         self._ind.start(self._cfg.max_recording_duration)
         self._notify("EasyType", "Recording…")
         print("[easytype] recording started")
@@ -127,6 +136,7 @@ class Controller:
 
     def _finish_recording(self) -> None:
         # Runs on a worker thread in the real app so the keyboard event loop never blocks.
+        self._stop_preview()
         self._ind.stop()
         audio = self._rec.stop()
         self._resume_media()

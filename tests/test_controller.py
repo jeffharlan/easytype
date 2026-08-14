@@ -180,6 +180,44 @@ def test_history_not_written_when_flag_off(tmp_path, history_file):
     assert history.read(history_file) == []
 
 
+class FakePreview:
+    def __init__(self): self.events = []
+    def start(self): self.events.append("start")
+    def stop(self): self.events.append("stop")
+
+
+def _build_with_preview(tmp_path, preview):
+    return Controller(
+        config=load_config(tmp_path / "c.toml"), recorder=FakeRecorder(),
+        transcriber=FakeTranscriber(), injector=FakeInjector(),
+        indicator=FakeIndicator(), notify=lambda *a: None, preview=preview,
+    )
+
+
+def test_recording_starts_then_stops_preview(tmp_path):
+    preview = FakePreview()
+    ctrl = _build_with_preview(tmp_path, preview)
+    ctrl.on_record()
+    assert preview.events == ["start"]
+    ctrl.on_record()
+    assert preview.events == ["start", "stop"]
+
+
+def test_cancel_stops_preview(tmp_path):
+    preview = FakePreview()
+    ctrl = _build_with_preview(tmp_path, preview)
+    ctrl.on_record()
+    ctrl.on_cancel()
+    assert preview.events == ["start", "stop"]
+
+
+def test_controller_works_without_a_preview(tmp_path):
+    ctrl = _build_with_preview(tmp_path, None)
+    ctrl.on_record()
+    ctrl.on_record()
+    assert ctrl.state == "idle"
+
+
 def test_history_failure_still_injects(tmp_path, monkeypatch):
     ctrl, inj = build(tmp_path)
 
