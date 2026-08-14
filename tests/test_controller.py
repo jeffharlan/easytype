@@ -32,6 +32,8 @@ class FakeIndicator:
     is_null = True
     def start(self, cap): ...
     def stop(self): ...
+    def caption(self, text): ...
+    def status(self, text): ...
 
 
 def build(tmp_path, **over):
@@ -298,3 +300,65 @@ def test_history_still_written_with_live_typing(tmp_path, history_file):
     ctrl.on_record()
     ctrl.on_record()
     assert [e.text for e in history.read(history_file)] == ["Ops plus is ready."]
+
+
+class RecordingIndicator:
+    """Non-null indicator that records the order of every call, so the final
+    caption can be proven to happen before injection."""
+    is_null = False
+
+    def __init__(self):
+        self.events = []
+
+    def start(self, cap): self.events.append("start")
+    def stop(self): self.events.append("stop")
+    def caption(self, text): self.events.append(f"caption:{text}")
+    def status(self, text): self.events.append(f"status:{text}")
+
+
+def test_final_text_is_shown_in_the_box_before_it_is_injected(tmp_path, monkeypatch):
+    monkeypatch.setattr("easytype.controller.FINAL_HOLD_S", 0)
+    ind = RecordingIndicator()
+    inj = FakeInjector()
+    ctrl = Controller(
+        config=load_config(tmp_path / "c.toml"), recorder=FakeRecorder(),
+        transcriber=FakeTranscriber(), injector=inj, indicator=ind,
+        notify=lambda *a: None,
+    )
+    ctrl.on_record()
+    ctrl.on_record()
+
+    assert "caption:Ops plus is ready." in ind.events
+    caption_at = ind.events.index("caption:Ops plus is ready.")
+    stop_at = ind.events.index("stop")
+    assert caption_at < stop_at, "the box must still be up when the final text is shown"
+    assert inj.injected == [("Ops plus is ready.", "type")]
+
+
+def test_box_is_torn_down_after_a_cancelled_transcription(tmp_path, monkeypatch):
+    monkeypatch.setattr("easytype.controller.FINAL_HOLD_S", 0)
+    ind = RecordingIndicator()
+    ctrl = Controller(
+        config=load_config(tmp_path / "c.toml"), recorder=FakeRecorder(),
+        transcriber=FakeTranscriber(), injector=FakeInjector(), indicator=ind,
+        notify=lambda *a: None,
+    )
+    ctrl.on_record()
+    ctrl.state = "transcribing"
+    ctrl.on_cancel()
+    ctrl._finish_recording()
+    assert ind.events.count("stop") >= 1
+
+
+def test_no_hold_when_there_is_no_box(tmp_path):
+    """FakeIndicator is null — nothing to look at, so nothing to wait for."""
+    ind = FakeIndicator()
+    inj = FakeInjector()
+    ctrl = Controller(
+        config=load_config(tmp_path / "c.toml"), recorder=FakeRecorder(),
+        transcriber=FakeTranscriber(), injector=inj, indicator=ind,
+        notify=lambda *a: None,
+    )
+    ctrl.on_record()
+    ctrl.on_record()
+    assert inj.injected == [("Ops plus is ready.", "type")]
