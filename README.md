@@ -141,6 +141,17 @@ Settings → Indicator has the controls, or in `config.toml`:
 
 Setting `model = ""` makes the preview exact, at the cost of it falling behind your voice on longer dictations. Preview draws inside the on-screen indicator, so it does nothing when the indicator is disabled.
 
+## Typing as you speak
+
+With **Type text into the app as I speak** ticked in Settings → Indicator, words go straight into whatever window you started dictating in, rather than arriving all at once when you stop.
+
+A word is typed once two consecutive transcription passes agree on it, so text lands about two seconds behind your voice and the remainder arrives when you stop. That delay is what makes it safe: EasyType never backspaces to correct itself mid-sentence, so it can't damage text already in your document.
+
+- It types **only into the window you started in**. Switch away and it pauses; switch back and it resumes.
+- **Esc** removes everything it typed — as long as you are still in that window. Otherwise it stops and leaves the text where it is.
+- It uses your main transcription model, ignoring the preview model setting, so what gets typed is the same quality as normal dictation.
+- It is unavailable while AI cleanup is on, because that rewrites the whole transcript at the end and cannot be applied a few words at a time.
+
 ## Recent transcripts
 
 The last five completed transcripts are kept in `~/.local/share/easytype/history.txt`, newest first, as plain text you can open in any editor:
