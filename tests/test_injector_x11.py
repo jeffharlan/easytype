@@ -25,6 +25,21 @@ def test_type_text_of_empty_string_runs_nothing(monkeypatch):
     assert calls == []
 
 
+def test_type_text_uses_the_configured_delay_by_default(monkeypatch):
+    seen = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: seen.append(cmd))
+    X11Injector(type_delay_ms=40).type_text("hi")
+    assert "40" in seen[0]
+
+
+def test_type_text_delay_can_be_overridden(monkeypatch):
+    seen = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: seen.append(cmd))
+    X11Injector(type_delay_ms=40).type_text("hi", delay_ms=10)
+    assert "10" in seen[0]
+    assert "40" not in seen[0]
+
+
 def test_active_window_returns_the_id(monkeypatch):
     class _R:
         returncode = 0

@@ -6,6 +6,11 @@ from easytype.config import DictEntry
 from easytype.dictionary import apply_dictionary
 from easytype.polish import polish_stream
 
+# Live chunks are small and frequent, so keystroke delay is a direct tax on how far
+# behind your voice the text lands. Measured on X11/GTK: 40ms costs ~21ms per
+# character, 10ms costs ~6ms, and text arrives intact at both.
+LIVE_TYPE_DELAY_MS = 10
+
 
 def settled_prefix(previous: str, current: str) -> str:
     """The leading run two consecutive passes agree on, cut back to whole words.
@@ -64,7 +69,7 @@ class LiveTypist:
         processed = polish_stream(apply_dictionary(settled, self._dict))
         chunk = pending_chunk(processed, self._typed)
         if chunk:
-            self._inj.type_text(chunk)
+            self._inj.type_text(chunk, LIVE_TYPE_DELAY_MS)
             self._typed = processed
 
     def finish(self, final: str) -> str:
@@ -79,7 +84,7 @@ class LiveTypist:
             self._inj.backspace(extra)
         tail = final[keep:]
         if tail:
-            self._inj.type_text(tail)
+            self._inj.type_text(tail, LIVE_TYPE_DELAY_MS)
         self._typed = final
         return tail
 
