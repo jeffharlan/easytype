@@ -12,6 +12,9 @@ WARN_WINDOW_S = 5
 PILL_W, PILL_H, MARGIN = 150, 44, 24
 CAPTION_W, CAPTION_LINES, CAPTION_CHARS = 420, 4, 52
 CAPTION_LINE_H = 18
+# Lines carrying this prefix set the pill's header and freeze its timer. A control
+# character keeps it unambiguous: transcripts never contain one.
+STATUS_PREFIX = "\x01"
 
 
 def _position_xy(position: str, sw: int, sh: int,
@@ -59,6 +62,7 @@ class NullIndicator:
     def start(self, cap: int) -> None: ...
     def stop(self) -> None: ...
     def caption(self, text: str) -> None: ...
+    def status(self, text: str) -> None: ...
 
 
 class ProcessIndicator:
@@ -85,10 +89,18 @@ class ProcessIndicator:
         original breaks carry no information and no escaping scheme is needed.
         Captions are advisory: if the pill has already exited (e.g. the cap timer
         fired), the write is dropped."""
+        self._send(" ".join(text.split()))
+
+    def status(self, text: str) -> None:
+        """Replace the timer with a fixed label and freeze it — the pill outlives
+        the recording now, and a still-counting timer would read as still recording."""
+        self._send(STATUS_PREFIX + " ".join(text.split()))
+
+    def _send(self, line: str) -> None:
         if self._proc is None or self._proc.stdin is None:
             return
         try:
-            self._proc.stdin.write(" ".join(text.split()) + "\n")
+            self._proc.stdin.write(line + "\n")
             self._proc.stdin.flush()
         except (BrokenPipeError, ValueError, OSError):
             pass
@@ -127,7 +139,7 @@ def _run_pill(position: str, count: str, cap: int) -> None:
                        wraplength=CAPTION_W - 24)
 
     captions: queue.Queue[str] = queue.Queue()
-    state = {"s": 0, "shown": False}
+    state = {"s": 0, "shown": False, "counting": True}
 
     def read_stdin():
         for line in sys.stdin:
@@ -138,11 +150,16 @@ def _run_pill(position: str, count: str, cap: int) -> None:
     def drain():
         # Tk widgets may only be touched from the thread running mainloop, so the
         # reader thread only queues text and this poll applies it.
-        text = None
+        newest_caption = None
         while not captions.empty():        # only the newest caption matters
-            text = captions.get_nowait()
-        if text is not None:
-            show(text)
+            line = captions.get_nowait()
+            if line.startswith(STATUS_PREFIX):
+                state["counting"] = False  # a status line ends the recording display
+                label.config(text=line[len(STATUS_PREFIX):], fg="white")
+            else:
+                newest_caption = line
+        if newest_caption is not None:
+            show(newest_caption)
         root.after(100, drain)
 
     def show(text: str):
@@ -158,6 +175,9 @@ def _run_pill(position: str, count: str, cap: int) -> None:
         root.geometry(f"{CAPTION_W}x{h}+{cx}+{cy}")
 
     def tick():
+        if not state["counting"]:
+            root.after(1000, tick)   # frozen: the owner decides when to close us
+            return
         s = state["s"]
         if cap and s > cap:
             root.destroy()

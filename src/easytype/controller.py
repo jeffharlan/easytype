@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Sequence
 
 import numpy as np
@@ -10,6 +11,11 @@ from easytype.config import Config, DictEntry
 from easytype.dictionary import apply_dictionary
 from easytype.formatter import format_text
 from easytype.polish import polish_text
+
+# How long the on-screen box stays up showing the finished transcript before the
+# text is injected. The last words spoken never make it into a mid-recording pass,
+# so without this the box never shows the end of what you said.
+FINAL_HOLD_S = 2.0
 
 
 class Controller:
@@ -143,11 +149,16 @@ class Controller:
     def _finish_recording(self) -> None:
         # Runs on a worker thread in the real app so the keyboard event loop never blocks.
         self._stop_preview()
-        self._ind.stop()
         audio = self._rec.stop()
         self._resume_media()
         print("[easytype] transcribing…")
-        text = self.process_audio(audio)
+        # The box stays up through transcription and the hold, so it can show the
+        # finished text; process_audio closes the loop before injecting.
+        self._ind.status("Transcribing…")
+        try:
+            text = self.process_audio(audio)
+        finally:
+            self._ind.stop()
         with self._lock:
             self.state = "idle"
         if text:
@@ -165,11 +176,21 @@ class Controller:
         if text:
             self.last_transcript = text
             self._record_history(text)
+            self._hold_final(text)
             if self._live and self._live.active:
                 self._live.finish(text)
             else:
                 self._inj.inject(text, self._cfg.injection_method)
         return text
+
+    def _hold_final(self, text: str) -> None:
+        """Show the finished transcript in the box and pause so it can be read.
+        Skipped when there is no box — nothing to look at, nothing to wait for."""
+        if self._ind.is_null:
+            return
+        self._ind.caption(text)
+        self._ind.status("Done")
+        time.sleep(FINAL_HOLD_S)
 
     def _record_history(self, text: str) -> None:
         if not self._cfg.history_enabled:

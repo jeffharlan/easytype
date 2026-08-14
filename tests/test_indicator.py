@@ -1,8 +1,8 @@
 import io
 
 from easytype.indicator import (
-    MARGIN, PILL_H, PILL_W, NullIndicator, ProcessIndicator, _position_xy, create_indicator,
-    format_elapsed, should_warn, wrap_tail,
+    MARGIN, PILL_H, PILL_W, STATUS_PREFIX, NullIndicator, ProcessIndicator, _position_xy,
+    create_indicator, format_elapsed, should_warn, wrap_tail,
 )
 from easytype.config import load_config
 
@@ -66,6 +66,21 @@ def test_caption_collapses_whitespace_so_one_caption_is_one_line():
     ind._proc = FakeProc()
     ind.caption("line one\nline two\t\tspaced")
     assert ind._proc.stdin.getvalue() == "line one line two spaced\n"
+
+
+def test_status_is_sent_with_the_control_prefix():
+    ind = ProcessIndicator("top-right", "up")
+    ind._proc = FakeProc()
+    ind.status("Transcribing…")
+    assert ind._proc.stdin.getvalue() == f"{STATUS_PREFIX}Transcribing…\n"
+
+
+def test_status_without_a_running_pill_is_a_noop():
+    ProcessIndicator("top-right", "up").status("Transcribing…")   # must not raise
+
+
+def test_null_indicator_status_is_a_noop():
+    NullIndicator().status("anything")
 
 
 def test_caption_without_a_running_pill_is_a_noop():
