@@ -120,14 +120,16 @@ Pure helpers, directly testable:
   (an earlier word changed; append-only cannot fix it, so the chunk is skipped
   and `finish` reconciles).
 
-`LiveTypist(injector, config, dictionary)`:
+`LiveTypist(injector, dictionary=())`:
 
 - `start()` — record the focused window id, clear all state.
 - `feed(raw: str)` — settle, apply dictionary + `polish_stream`, slice the
   pending chunk, and type it if the original window is focused. Updates the typed
   count.
 - `finish(final: str) -> str` — reconcile the document with the authoritative
-  final transcript, then type the closing period. Returns the text typed.
+  final transcript. Returns the text typed. The closing period needs no separate
+  keystroke: `final` is the fully polished transcript, so the period arrives as
+  part of the reconciled tail.
 
   The final transcript is normally an extension of what was typed, since both
   come from the same model, and the remainder is simply appended. When it is not,
