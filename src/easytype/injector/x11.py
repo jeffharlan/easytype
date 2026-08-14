@@ -24,6 +24,10 @@ def paste_key_command(shift: bool = False) -> list[str]:
     return ["xdotool", "key", "--clearmodifiers", combo]
 
 
+def backspace_command(count: int) -> list[str]:
+    return ["xdotool", "key", "--clearmodifiers", "--repeat", str(count), "BackSpace"]
+
+
 def _active_app_name() -> str:
     """Focused app's process name. xdotool's getwindowclassname doesn't exist on
     older xdotool, but getwindowpid does, and /proc/<pid>/comm is enough to spot a
@@ -56,6 +60,27 @@ class X11Injector:
             self._paste(text)
         else:
             subprocess.run(type_command(text, self._delay), check=True)
+
+    def type_text(self, text: str) -> None:
+        """Raw incremental typing for live dictation — no paste path, since
+        clipboard round-trips several times a second would trample the clipboard."""
+        if text:
+            subprocess.run(type_command(text, self._delay), check=True)
+
+    def backspace(self, count: int) -> None:
+        if count > 0:
+            subprocess.run(backspace_command(count), check=True)
+
+    def active_window(self) -> str:
+        """Focused window id, or "" when it cannot be determined. Callers treat ""
+        as a mismatch, so a missing or broken xdotool disables typing rather than
+        letting it write blind."""
+        try:
+            r = subprocess.run(["xdotool", "getactivewindow"],
+                               capture_output=True, text=True, timeout=1)
+            return r.stdout.strip() if r.returncode == 0 else ""
+        except Exception:
+            return ""
 
     def _paste(self, text: str) -> None:
         saved = self._read_clipboard()
