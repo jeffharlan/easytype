@@ -4,7 +4,11 @@ import threading
 
 from easytype.recorder import SAMPLE_RATE
 
-PREVIEW_INTERVAL = 1.0      # seconds between passes, not a deadline for one
+# Breathing room between passes, not a pacing interval: the loop already
+# self-throttles, since the next pass cannot start until the previous one returns.
+# Every second spent here is a second of lag before a word can settle, so this is
+# kept just long enough to stop a fast model from pegging the GPU.
+PREVIEW_INTERVAL = 0.15
 MIN_PREVIEW_SECONDS = 0.5   # below this there is nothing worth transcribing
 
 

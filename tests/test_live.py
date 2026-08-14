@@ -1,18 +1,20 @@
 from easytype.config import DictEntry
-from easytype.live import LiveTypist, pending_chunk, settled_prefix
+from easytype.live import LIVE_TYPE_DELAY_MS, LiveTypist, pending_chunk, settled_prefix
 
 
 class FakeInjector:
     def __init__(self, window="win-1"):
         self.window = window
         self.typed = []
+        self.delays = []
         self.backspaces = []
 
     def active_window(self):
         return self.window
 
-    def type_text(self, text):
+    def type_text(self, text, delay_ms=None):
         self.typed.append(text)
+        self.delays.append(delay_ms)
 
     def backspace(self, count):
         self.backspaces.append(count)
@@ -214,3 +216,25 @@ def test_start_clears_state_from_the_previous_recording():
     typist.feed("different words entirely")
     typist.feed("different words entirely now")
     assert "".join(inj.typed) == "Different words "
+
+
+def test_feed_types_with_the_fast_live_delay():
+    """Live chunks are small and frequent, so they use a lower keystroke delay
+    than one-shot injection — the delay is the largest avoidable cost per chunk."""
+    inj = FakeInjector()
+    typist = LiveTypist(inj)
+    typist.start()
+    typist.feed("check the camera")
+    typist.feed("check the camera counts")
+    assert inj.delays == [LIVE_TYPE_DELAY_MS]
+
+
+def test_finish_also_uses_the_fast_live_delay():
+    inj = FakeInjector()
+    typist = LiveTypist(inj)
+    typist.start()
+    typist.feed("check the camera")
+    typist.feed("check the camera counts")
+    inj.delays.clear()
+    typist.finish("Check the camera counts.")
+    assert inj.delays == [LIVE_TYPE_DELAY_MS]

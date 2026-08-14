@@ -61,11 +61,16 @@ class X11Injector:
         else:
             subprocess.run(type_command(text, self._delay), check=True)
 
-    def type_text(self, text: str) -> None:
+    def type_text(self, text: str, delay_ms: int | None = None) -> None:
         """Raw incremental typing for live dictation — no paste path, since
-        clipboard round-trips several times a second would trample the clipboard."""
+        clipboard round-trips several times a second would trample the clipboard.
+        `delay_ms` overrides the configured keystroke delay, which is tuned for
+        one-shot injection and is far too slow for chunks typed while speaking."""
         if text:
-            subprocess.run(type_command(text, self._delay), check=True)
+            subprocess.run(
+                type_command(text, self._delay if delay_ms is None else delay_ms),
+                check=True,
+            )
 
     def backspace(self, count: int) -> None:
         if count > 0:
