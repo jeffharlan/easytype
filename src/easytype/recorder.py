@@ -26,11 +26,17 @@ class Recorder:
         )
         self._stream.start()
 
+    def snapshot(self) -> np.ndarray:
+        """Audio captured so far, without touching the stream. The audio callback
+        keeps appending to _frames while this runs, so copy the list first."""
+        frames = self._frames[:]
+        if not frames:
+            return np.zeros(0, dtype=np.float32)
+        return np.concatenate(frames, axis=0).flatten()
+
     def stop(self) -> np.ndarray:
         if self._stream is not None:
             self._stream.stop()
             self._stream.close()
             self._stream = None
-        if not self._frames:
-            return np.zeros(0, dtype=np.float32)
-        return np.concatenate(self._frames, axis=0).flatten()
+        return self.snapshot()
