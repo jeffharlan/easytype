@@ -163,9 +163,19 @@ class SettingsWindow(QDialog):
         self.indicator_enabled = QCheckBox("Show the on-screen recording indicator")
         self.indicator_position = QComboBox(); self.indicator_position.addItems(POSITIONS)
         self.indicator_count = QComboBox(); self.indicator_count.addItems(["up", "down"])
+        self.preview_enabled = QCheckBox("Show live preview text while recording")
+        self.preview_model = QComboBox()
+        self.preview_model.setEditable(True)
+        self.preview_model.addItems(MODELS)
+        self.preview_model.setToolTip(
+            "Smaller is faster and keeps up with your voice. "
+            "Set it to your main model for an exact preview at the cost of lag."
+        )
         form.addRow(self.indicator_enabled)
         form.addRow("Position", self.indicator_position)
         form.addRow("Count", self.indicator_count)
+        form.addRow(self.preview_enabled)
+        form.addRow("Preview model", self.preview_model)
         return w
 
     def _dictionary_tab(self):
@@ -243,6 +253,8 @@ class SettingsWindow(QDialog):
         self.indicator_enabled.setChecked(c.indicator_enabled)
         self.indicator_position.setCurrentText(c.indicator_position)
         self.indicator_count.setCurrentText(c.indicator_count)
+        self.preview_enabled.setChecked(c.preview_enabled)
+        self.preview_model.setCurrentText(c.preview_model)
         self.keyboard_device.setText(c.keyboard_device)
         self.history_enabled.setChecked(c.history_enabled)
         self.start_on_login.setChecked(autostart.is_enabled())
@@ -272,6 +284,8 @@ class SettingsWindow(QDialog):
             "indicator_enabled": self.indicator_enabled.isChecked(),
             "indicator_position": self.indicator_position.currentText(),
             "indicator_count": self.indicator_count.currentText(),
+            "preview_enabled": self.preview_enabled.isChecked(),
+            "preview_model": self.preview_model.currentText(),
             "keyboard_device": self.keyboard_device.text(),
             "pause_media_while_recording": self.pause_media.isChecked(),
             "history_enabled": self.history_enabled.isChecked(),
