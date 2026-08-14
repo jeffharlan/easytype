@@ -228,3 +228,73 @@ def test_history_failure_still_injects(tmp_path, monkeypatch):
     ctrl.on_record()
     ctrl.on_record()
     assert inj.injected == [("Ops plus is ready.", "type")]
+
+
+class FakeLive:
+    def __init__(self, active=False):
+        self.events = []
+        self.active = active
+        self.finished = None
+
+    def start(self):
+        self.events.append("start")
+
+    def finish(self, text):
+        self.events.append("finish")
+        self.finished = text
+        return text
+
+    def undo(self):
+        self.events.append("undo")
+        return True
+
+
+def _build_with_live(tmp_path, live):
+    inj = FakeInjector()
+    ctrl = Controller(
+        config=load_config(tmp_path / "c.toml"), recorder=FakeRecorder(),
+        transcriber=FakeTranscriber(), injector=inj,
+        indicator=FakeIndicator(), notify=lambda *a: None, live=live,
+    )
+    return ctrl, inj
+
+
+def test_recording_starts_the_live_typist(tmp_path):
+    live = FakeLive()
+    ctrl, _ = _build_with_live(tmp_path, live)
+    ctrl.on_record()
+    assert live.events == ["start"]
+
+
+def test_finish_replaces_injection_when_live_typing_is_active(tmp_path):
+    live = FakeLive(active=True)
+    ctrl, inj = _build_with_live(tmp_path, live)
+    ctrl.on_record()
+    ctrl.on_record()
+    assert live.finished == "Ops plus is ready."
+    assert inj.injected == []
+
+
+def test_injection_still_runs_when_nothing_was_typed_live(tmp_path):
+    live = FakeLive(active=False)
+    ctrl, inj = _build_with_live(tmp_path, live)
+    ctrl.on_record()
+    ctrl.on_record()
+    assert "finish" not in live.events
+    assert inj.injected == [("Ops plus is ready.", "type")]
+
+
+def test_cancel_undoes_live_typing(tmp_path):
+    live = FakeLive(active=True)
+    ctrl, _ = _build_with_live(tmp_path, live)
+    ctrl.on_record()
+    ctrl.on_cancel()
+    assert "undo" in live.events
+
+
+def test_history_still_written_with_live_typing(tmp_path, history_file):
+    live = FakeLive(active=True)
+    ctrl, _ = _build_with_live(tmp_path, live)
+    ctrl.on_record()
+    ctrl.on_record()
+    assert [e.text for e in history.read(history_file)] == ["Ops plus is ready."]

@@ -1,3 +1,6 @@
+import threading
+import time
+
 import numpy as np
 
 from easytype.transcriber import Transcriber, resolve_compute_type
@@ -31,6 +34,34 @@ def test_no_initial_prompt_passes_none():
     tx._model = fake
     tx.transcribe(np.ones(16000, dtype=np.float32))
     assert fake.calls[0]["initial_prompt"] is None
+
+
+def test_concurrent_transcribes_never_overlap():
+    class _ReentrancyDetector:
+        def __init__(self):
+            self.inside = 0
+            self.overlapped = False
+
+        def transcribe(self, audio, **kwargs):
+            self.inside += 1
+            if self.inside > 1:
+                self.overlapped = True
+            time.sleep(0.02)
+            self.inside -= 1
+            return ([_FakeSegment("hello")], object())
+
+    detector = _ReentrancyDetector()
+    tx = Transcriber()
+    tx._model = detector
+    threads = [
+        threading.Thread(target=tx.transcribe, args=(np.ones(16000, dtype=np.float32),))
+        for _ in range(4)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert detector.overlapped is False
 
 
 def test_compute_type_cpu():

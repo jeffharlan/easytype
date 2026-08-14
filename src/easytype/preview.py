@@ -9,13 +9,14 @@ MIN_PREVIEW_SECONDS = 0.5   # below this there is nothing worth transcribing
 
 
 class PreviewWorker:
-    """Re-transcribes the growing audio buffer while recording and pushes the
-    result to the indicator. Display only — nothing here reaches the injector."""
+    """Re-transcribes the growing audio buffer while recording and hands each
+    transcript to `on_text`. It does not know whether that becomes a caption or
+    keystrokes — the engine decides that once, when it wires the sink."""
 
-    def __init__(self, recorder, transcriber, indicator, interval: float = PREVIEW_INTERVAL):
+    def __init__(self, recorder, transcriber, on_text, interval: float = PREVIEW_INTERVAL):
         self._rec = recorder
         self._tx = transcriber
-        self._ind = indicator
+        self._on_text = on_text
         self._interval = interval
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -50,4 +51,4 @@ class PreviewWorker:
             print(f"[easytype] preview pass failed: {exc}")
             return
         if text.strip() and not self._stop.is_set():
-            self._ind.caption(text)
+            self._on_text(text)

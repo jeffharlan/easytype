@@ -1,4 +1,45 @@
-from easytype.injector.x11 import type_command, paste_key_command, is_terminal
+import subprocess
+
+from easytype.injector.x11 import (
+    X11Injector, backspace_command, is_terminal, paste_key_command, type_command,
+)
+
+
+def test_backspace_command_repeats_the_key():
+    assert backspace_command(7) == [
+        "xdotool", "key", "--clearmodifiers", "--repeat", "7", "BackSpace",
+    ]
+
+
+def test_backspace_of_zero_runs_nothing(monkeypatch):
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: calls.append(a))
+    X11Injector().backspace(0)
+    assert calls == []
+
+
+def test_type_text_of_empty_string_runs_nothing(monkeypatch):
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: calls.append(a))
+    X11Injector().type_text("")
+    assert calls == []
+
+
+def test_active_window_returns_the_id(monkeypatch):
+    class _R:
+        returncode = 0
+        stdout = "12582918\n"
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _R())
+    assert X11Injector().active_window() == "12582918"
+
+
+def test_active_window_is_empty_when_xdotool_fails(monkeypatch):
+    def boom(*a, **kw):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(subprocess, "run", boom)
+    assert X11Injector().active_window() == ""
 
 
 def test_type_command_uses_clearmodifiers_and_delay():

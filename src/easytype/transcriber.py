@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+
 import numpy as np
 
 
@@ -15,6 +17,8 @@ class Transcriber:
         self._device = device
         self._initial_prompt = initial_prompt
         self._model = None
+        # Preview and the final pass share one Transcriber across threads.
+        self._lock = threading.Lock()
 
     def _ensure_model(self):
         if self._model is None:
@@ -36,9 +40,10 @@ class Transcriber:
     def transcribe(self, audio: np.ndarray) -> str:
         if audio.size == 0:
             return ""
-        model = self._ensure_model()
-        segments, _info = model.transcribe(
-            audio, language=self._language, beam_size=5,
-            initial_prompt=self._initial_prompt or None,
-        )
-        return "".join(seg.text for seg in segments).strip()
+        with self._lock:
+            model = self._ensure_model()
+            segments, _info = model.transcribe(
+                audio, language=self._language, beam_size=5,
+                initial_prompt=self._initial_prompt or None,
+            )
+            return "".join(seg.text for seg in segments).strip()
