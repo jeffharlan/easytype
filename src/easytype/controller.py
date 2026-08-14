@@ -5,6 +5,7 @@ from collections.abc import Callable, Sequence
 
 import numpy as np
 
+from easytype import history
 from easytype.config import Config, DictEntry
 from easytype.dictionary import apply_dictionary
 from easytype.formatter import format_text
@@ -147,5 +148,14 @@ class Controller:
             return ""
         if text:
             self.last_transcript = text
+            self._record_history(text)
             self._inj.inject(text, self._cfg.injection_method)
         return text
+
+    def _record_history(self, text: str) -> None:
+        if not self._cfg.history_enabled:
+            return
+        try:
+            history.append(text)
+        except Exception as exc:
+            print(f"[easytype] history write failed: {exc}")
