@@ -15,6 +15,14 @@ class Issue:
     fix: str
 
 
+def blocks_run(session: str, passive: bool) -> bool:
+    """A real (grab) run on Wayland would try to type through the injector once
+    transcription finishes, and Wayland injection isn't implemented in Phase 1 —
+    so it must refuse up front. --passive never injects for real, so it can
+    still run on Wayland to exercise recording and transcription."""
+    return session == "wayland" and not passive
+
+
 def detect_session() -> str:
     if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("XDG_SESSION_TYPE") == "wayland":
         return "wayland"

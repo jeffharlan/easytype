@@ -1,4 +1,4 @@
-from easytype.preflight import Issue, detect_session, gather_issues, format_report
+from easytype.preflight import Issue, blocks_run, detect_session, gather_issues, format_report
 
 
 def test_detect_session_x11(monkeypatch):
@@ -49,6 +49,23 @@ def test_missing_binary_reported():
     x = next(i for i in issues if i.name == "xdotool")
     assert not x.ok
     assert "apt install" in x.fix
+
+
+def test_blocks_run_on_wayland_grab_mode():
+    # A real (non-passive) run would try to type through the unimplemented
+    # Wayland injector, so it must refuse up front rather than crash later.
+    assert blocks_run("wayland", passive=False) is True
+
+
+def test_does_not_block_wayland_passive_mode():
+    # --passive never really injects, so it can still exercise recording +
+    # transcription on Wayland per the README.
+    assert blocks_run("wayland", passive=True) is False
+
+
+def test_does_not_block_x11_either_mode():
+    assert blocks_run("x11", passive=False) is False
+    assert blocks_run("x11", passive=True) is False
 
 
 def test_format_report_marks_pass_and_fail():

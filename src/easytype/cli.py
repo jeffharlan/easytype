@@ -73,10 +73,11 @@ def cmd_run(passive: bool) -> int:
     config = load_config()
     session = preflight.detect_session()
 
-    if session == "wayland":
+    if preflight.blocks_run(session, passive):
         print(
             "EasyType Phase 1 supports X11 only — Wayland text injection isn't "
-            "implemented yet.\nSee the README (Troubleshooting) for status."
+            "implemented yet.\nSee the README (Troubleshooting) for status.\n"
+            "Use --passive to test recording and transcription without injection."
         )
         return 1
 
