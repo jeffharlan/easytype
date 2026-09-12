@@ -7,11 +7,18 @@ class Injector(Protocol):
     def inject(self, text: str, method: str) -> None: ...
 
 
+class NullInjector:
+    """Wayland has no working injector in Phase 1. cli.py's --passive is the
+    only way to reach this on Wayland (a real run is refused before the engine
+    is built), so injection is expected to be a no-op there rather than a crash —
+    the point of --passive is to exercise recording and transcription only."""
+
+    def inject(self, text: str, method: str) -> None:
+        print(f"[easytype] Wayland injection not implemented yet — would have typed: {text!r}")
+
+
 def get_injector(session: str, type_delay_ms: int = 40) -> Injector:
     if session == "wayland":
-        raise NotImplementedError(
-            "Wayland injector is not implemented in Phase 1. Run on X11, "
-            "or use --passive and copy text manually."
-        )
+        return NullInjector()
     from easytype.injector.x11 import X11Injector
     return X11Injector(type_delay_ms)
