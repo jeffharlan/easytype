@@ -39,6 +39,8 @@ class Controller:
         self._sync = synchronous  # tests run inline; real runtime sets False
         self.state = "idle"  # idle | recording | transcribing
         self.last_transcript = ""
+        self._last_window = ""   # window the previous transcript landed in
+        self._lead_in = ""
         self._lock = threading.RLock()
         self._cap_timer: threading.Timer | None = None
         self._cancelled = False
@@ -108,17 +110,26 @@ class Controller:
 
     def _start(self) -> None:
         self._cancelled = False
+        self._lead_in = self._separator()
         self.state = "recording"
         self._pause_media()
         self._rec.start()
         if self._live:
-            self._live.start()      # capture the window before any transcript lands
+            self._live.start(self._lead_in)   # capture the window before any transcript lands
         if self._preview:
             self._preview.start()
         self._ind.start(self._cfg.max_recording_duration)
         self._notify("EasyType", "Recording…")
         print("[easytype] recording started")
         self._arm_cap_timer()
+
+    def _separator(self) -> str:
+        """A space when this dictation continues where the last one stopped.
+        Transcripts are stripped and end in a period, so without it consecutive
+        dictations run together as "…EasyType.Here is…". A different focused
+        window means a fresh spot, so nothing is prepended there."""
+        window = self._inj.active_window()
+        return " " if window and window == self._last_window else ""
 
     def _arm_cap_timer(self) -> None:
         cap = self._cfg.max_recording_duration
@@ -178,9 +189,10 @@ class Controller:
             self._record_history(text)
             self._hold_final(text)
             if self._live and self._live.active:
-                self._live.finish(text)
+                self._live.finish(self._lead_in + text)
             else:
-                self._inj.inject(text, self._cfg.injection_method)
+                self._inj.inject(self._lead_in + text, self._cfg.injection_method)
+            self._last_window = self._inj.active_window()
         return text
 
     def _hold_final(self, text: str) -> None:

@@ -238,3 +238,22 @@ def test_finish_also_uses_the_fast_live_delay():
     inj.delays.clear()
     typist.finish("Check the camera counts.")
     assert inj.delays == [LIVE_TYPE_DELAY_MS]
+
+
+def test_live_typing_leads_with_the_separator_from_the_previous_dictation():
+    inj = FakeInjector()
+    typist = LiveTypist(inj)
+    typist.start(" ")
+    typist.feed("check the camera")
+    typist.feed("check the camera counts")
+    assert "".join(inj.typed) == " Check the "
+
+
+def test_undo_removes_the_lead_in_too():
+    inj = FakeInjector()
+    typist = LiveTypist(inj)
+    typist.start(" ")
+    typist.feed("check the camera")
+    typist.feed("check the camera counts")
+    typist.undo()
+    assert inj.backspaces == [len(" Check the ")]

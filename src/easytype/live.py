@@ -47,6 +47,7 @@ class LiveTypist:
         self._inj = injector
         self._dict = list(dictionary)
         self._window = ""
+        self._lead_in = ""
         self._previous = ""
         self._typed = ""
         self._warned = False
@@ -55,8 +56,9 @@ class LiveTypist:
     def active(self) -> bool:
         return bool(self._typed)
 
-    def start(self) -> None:
+    def start(self, lead_in: str = "") -> None:
         self._window = self._inj.active_window()
+        self._lead_in = lead_in
         self._previous = ""
         self._typed = ""
         self._warned = False
@@ -66,7 +68,7 @@ class LiveTypist:
         self._previous = raw
         if not settled or not self._focused():
             return
-        processed = polish_stream(apply_dictionary(settled, self._dict))
+        processed = self._lead_in + polish_stream(apply_dictionary(settled, self._dict))
         chunk = pending_chunk(processed, self._typed)
         if chunk:
             self._inj.type_text(chunk, LIVE_TYPE_DELAY_MS)
