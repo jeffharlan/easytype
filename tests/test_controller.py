@@ -20,7 +20,8 @@ class FakeRecorder:
 
 
 class FakeTranscriber:
-    def transcribe(self, audio): return "ops plus is ready"
+    # Whisper punctuates a finished sentence itself; polish no longer adds one.
+    def transcribe(self, audio): return "ops plus is ready."
 
 
 class FakeInjector:
@@ -435,7 +436,7 @@ def test_spoken_commands_are_typed_literally_when_the_switch_is_off(tmp_path):
         tmp_path, "all done period", voice_commands=False,
     )
     ctrl.on_record(); ctrl.on_record()
-    assert inj.injected[0][0] == "All done period."
+    assert inj.injected[0][0] == "All done period"
 
 
 def test_scratch_that_alone_deletes_the_previous_dictation(tmp_path):
@@ -452,7 +453,7 @@ def test_scratch_that_partway_keeps_the_previous_dictation(tmp_path):
     ctrl, inj = _build_scripted(tmp_path, "three cameras scratch that four cameras")
     ctrl.on_record(); ctrl.on_record()
     assert inj.backspaces == []
-    assert inj.injected[0][0] == "Four cameras."
+    assert inj.injected[0][0] == "Four cameras"
 
 
 def test_scratch_that_after_moving_windows_deletes_nothing(tmp_path):
@@ -467,5 +468,5 @@ def test_scratch_that_then_more_words_replaces_the_previous_dictation(tmp_path):
     ctrl, inj = _build_scripted(tmp_path, "three cameras", "scratch that four cameras")
     ctrl.on_record(); ctrl.on_record()
     ctrl.on_record(); ctrl.on_record()
-    assert inj.backspaces == [len(" Three cameras.")]
-    assert inj.injected[1][0] == "Four cameras."   # no leading space: the old text is gone
+    assert inj.backspaces == [len(" Three cameras")]
+    assert inj.injected[1][0] == "Four cameras"   # no leading space: the old text is gone

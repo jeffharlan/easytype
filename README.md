@@ -174,6 +174,11 @@ throws away everything before it and types only what follows. If you have clicke
 into a different window since, nothing is deleted — EasyType will not reach back
 into a window you have left.
 
+EasyType no longer invents a closing period. Whisper ends a finished sentence on
+its own and leaves a trailing-off one bare, so a bare ending is taken as "not
+finished" and your next dictation flows straight on from it. Say `period` when you
+want to insist on one.
+
 The trade-off is the usual one for dictation: a phrase used as a command cannot be
 typed literally. You cannot dictate the words *new paragraph* into a document.
 

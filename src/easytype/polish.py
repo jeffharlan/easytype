@@ -27,10 +27,12 @@ def polish_stream(text: str) -> str:
 def polish_text(text: str) -> str:
     """Deterministic sentence polish applied to every transcript: capitalize
     sentence starts and standalone "I", and tidy spacing. Rules, not a model, so
-    the mechanical fixes are always correct even when AI cleanup is off."""
+    the mechanical fixes are always correct even when AI cleanup is off.
+
+    No closing period is invented. Measured on small.en, Whisper ends a finished
+    sentence itself and leaves a trailing-off one bare, so a bare ending is a
+    signal the speaker is not done — forcing a period there broke every dictation
+    that stopped mid-thought. Say "period" to insist on one."""
     if not text.strip():
         return text
-    text = polish_stream(text).rstrip()
-    if text and text[-1] not in ".!?":
-        text = text.rstrip(",;:") + "."
-    return text
+    return polish_stream(text).rstrip().rstrip(",;:")

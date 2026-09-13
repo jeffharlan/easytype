@@ -168,6 +168,11 @@ If the rate is poor, stop and report rather than shipping the change. The rest
 of the design (commands, `scratch that`, the setting) does not depend on this
 result and can proceed either way.
 
+**Measured 2026-09-13, `small.en`, eight utterances: 7 of 8 ended with `.`,
+`!` or `?`.** The single bare result was `'I guess so not really sure'` — a
+genuine trailing-off, which is exactly the case that should not receive a
+period. Change approved on that evidence.
+
 ## Testing
 
 Unit, no hardware:
