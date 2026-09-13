@@ -16,3 +16,13 @@ def test_get_injector_wayland_returns_null_injector_instead_of_raising():
 
 def test_null_injector_inject_does_not_raise():
     NullInjector().inject("hello", "type")
+
+
+def test_null_injector_answers_the_window_and_typing_calls():
+    """Wayland --passive builds a NullInjector. The controller asks it for the
+    focused window on every start, and LiveTypist types through it, so a missing
+    method there is a crash on the first hotkey press rather than a quiet no-op."""
+    n = NullInjector()
+    assert n.active_window() == ""
+    n.type_text("hello", 10)
+    n.backspace(3)
