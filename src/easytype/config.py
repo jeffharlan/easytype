@@ -9,6 +9,7 @@ DEFAULT_CONFIG_PATH = Path("~/.config/easytype/config.toml").expanduser()
 
 DEFAULT_CONFIG_TOML = """\
 capture_mode = "toggle"            # "toggle" | "hold"
+voice_commands = true              # say "period", "new paragraph", "scratch that"
 max_recording_duration = 60        # seconds — auto-stop safety backstop
 
 [hotkey]
@@ -106,6 +107,7 @@ class Config:
     preview_enabled: bool
     preview_model: str
     inject_live: bool
+    voice_commands: bool
     dictionary: tuple[DictEntry, ...]
 
 
@@ -147,6 +149,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
     return Config(
         capture_mode=str(doc.get("capture_mode", "toggle")),
         max_recording_duration=int(doc.get("max_recording_duration", 60)),
+        voice_commands=bool(doc.get("voice_commands", True)),
         record=_hotkey(hk, [29, 57], "Ctrl+Space"),
         cancel=_hotkey(hk.get("cancel"), [1], "Esc"),
         repaste=_hotkey(hk.get("repaste"), [66], "F8"),
@@ -185,6 +188,7 @@ def apply_settings_to_doc(doc: tomlkit.TOMLDocument, values: dict) -> None:
     Reuses set_hotkey_in_doc for the three hotkeys."""
     doc["capture_mode"] = values["capture_mode"]
     doc["max_recording_duration"] = int(values["max_recording_duration"])
+    doc["voice_commands"] = bool(values["voice_commands"])
 
     set_hotkey_in_doc(doc, "record", list(values["record_keys"]), values["record_description"])
     set_hotkey_in_doc(doc, "cancel", list(values["cancel_keys"]), values["cancel_description"])

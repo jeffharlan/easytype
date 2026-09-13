@@ -50,7 +50,7 @@ def build_engine(config: Config, session: str,
         # Live typing reuses the main transcriber: what gets typed must be the
         # quality the user already expects, and a second copy of the same model
         # would cost VRAM for nothing.
-        live = LiveTypist(injector, config.dictionary)
+        live = LiveTypist(injector, config.dictionary, config.voice_commands)
         preview = PreviewWorker(recorder, transcriber, live.feed)
     # No indicator means nowhere to draw, so preview is skipped regardless of the flag.
     elif config.preview_enabled and not indicator.is_null:

@@ -79,6 +79,7 @@ def test_set_record_hotkey_preserves_file(tmp_path: Path):
 
 
 SAMPLE_SETTINGS = {
+    "voice_commands": True,
     "capture_mode": "hold",
     "max_recording_duration": 30,
     "record_keys": [29, 43], "record_description": "Ctrl+\\",
@@ -170,3 +171,16 @@ def test_set_dictionary_empty_clears_existing(tmp_path: Path):
     cfg.set_dictionary_in_doc(doc, [])
     cfg.save_doc(doc, path)
     assert cfg.load_config(path).dictionary == ()
+
+
+def test_voice_commands_defaults_on(tmp_path: Path):
+    assert cfg.load_config(tmp_path / "config.toml").voice_commands is True
+
+
+def test_voice_commands_round_trips_through_settings(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    cfg.load_config(path)
+    doc = cfg.load_doc(path)
+    cfg.apply_settings_to_doc(doc, {**SAMPLE_SETTINGS, "voice_commands": False})
+    cfg.save_doc(doc, path)
+    assert cfg.load_config(path).voice_commands is False
