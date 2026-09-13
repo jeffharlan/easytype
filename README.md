@@ -152,6 +152,36 @@ A word is typed once two consecutive transcription passes agree on it, so text l
 - It uses your main transcription model, ignoring the preview model setting, so what gets typed is the same quality as normal dictation.
 - It is unavailable while AI cleanup is on, because that rewrites the whole transcript at the end and cannot be applied a few words at a time.
 
+## Spoken commands
+
+Some words are treated as instructions rather than text:
+
+| Say | You get |
+| --- | --- |
+| `period` | `.` |
+| `comma` | `,` |
+| `question mark` | `?` |
+| `exclamation point` | `!` |
+| `new line` | a line break |
+| `new paragraph` | a blank line |
+| `scratch that` | EasyType takes back what it just typed |
+
+They work mid-sentence: *"we need three cameras comma two readers period"* becomes
+`We need three cameras, two readers.`
+
+`scratch that` on its own deletes your previous dictation. Said partway through, it
+throws away everything before it and types only what follows. If you have clicked
+into a different window since, nothing is deleted — EasyType will not reach back
+into a window you have left.
+
+The trade-off is the usual one for dictation: a phrase used as a command cannot be
+typed literally. You cannot dictate the words *new paragraph* into a document.
+
+**Turn this off for chat apps.** In Slack, Teams, and most chat boxes a line break
+presses Enter, which sends the message. The switch is `voice_commands` in the config
+file, or **Obey spoken commands** on the Typing tab of Settings. With it off, the
+words above are typed as words.
+
 ## Recent transcripts
 
 The last five completed transcripts are kept in `~/.local/share/easytype/history.txt`, newest first, as plain text you can open in any editor:

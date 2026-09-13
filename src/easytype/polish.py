@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import re
 
-_SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
+_SPACE_BEFORE_PUNCT = re.compile(r"[ \t]+([,.;:!?])")
 _REPEATED_SPACE = re.compile(r"[ \t]{2,}")
 _STANDALONE_I = re.compile(r"\bi\b")
 _FIRST_LETTER = re.compile(r"^(\s*)([a-z])")
 _AFTER_SENTENCE = re.compile(r"([.!?]\s+)([a-z])")
+_AFTER_BREAK = re.compile(r"(\n[ \t]*)([a-z])")
 
 
 def polish_stream(text: str) -> str:
@@ -19,7 +20,8 @@ def polish_stream(text: str) -> str:
     text = _REPEATED_SPACE.sub(" ", text)
     text = _STANDALONE_I.sub("I", text)
     text = _FIRST_LETTER.sub(lambda m: m.group(1) + m.group(2).upper(), text)
-    return _AFTER_SENTENCE.sub(lambda m: m.group(1) + m.group(2).upper(), text)
+    text = _AFTER_SENTENCE.sub(lambda m: m.group(1) + m.group(2).upper(), text)
+    return _AFTER_BREAK.sub(lambda m: m.group(1) + m.group(2).upper(), text)
 
 
 def polish_text(text: str) -> str:

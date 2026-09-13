@@ -80,3 +80,21 @@ def test_empty_string_unchanged():
 
 def test_already_correct_text_unchanged():
     assert polish_text("Send the proposal Wednesday.") == "Send the proposal Wednesday."
+
+
+def test_a_word_after_a_line_break_starts_a_new_sentence():
+    assert polish_text("first \n second") == "First \n Second."
+
+
+def test_a_paragraph_break_survives_punctuation_tidying():
+    # "\s+" before punctuation would have swallowed the newlines themselves.
+    assert polish_text("stop \n\n .") == "Stop \n\n."
+
+
+def test_polish_stream_stays_prefix_stable_across_a_line_break():
+    full = "first \n\n second thought"
+    for cut in range(len(full)):
+        if full[cut] != " ":
+            continue
+        prefix = full[: cut + 1]
+        assert polish_stream(full).startswith(polish_stream(prefix))

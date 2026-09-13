@@ -7,6 +7,7 @@ from collections.abc import Callable, Sequence
 import numpy as np
 
 from easytype import history
+from easytype.commands import apply_commands, split_scratch
 from easytype.config import Config, DictEntry
 from easytype.dictionary import apply_dictionary
 from easytype.formatter import format_text
@@ -179,11 +180,17 @@ class Controller:
         text = self._tx.transcribe(audio)
         text = apply_dictionary(text, self._dict)
         text = format_text(text, self._cfg)
+        drop_previous = False
+        if self._cfg.voice_commands:
+            text, drop_previous = split_scratch(text)
+            text = apply_commands(text)
         text = polish_text(text)
         text = text.strip()
         if self._cancelled:
             self._cancelled = False
             return ""
+        if drop_previous:
+            self._drop_previous()
         if text:
             self.last_transcript = text
             self._record_history(text)
@@ -194,6 +201,20 @@ class Controller:
                 self._inj.inject(self._lead_in + text, self._cfg.injection_method)
             self._last_window = self._inj.active_window()
         return text
+
+    def _drop_previous(self) -> None:
+        """Take back the dictation before this one, for "scratch that". Anything
+        typed live during this dictation has to come out first — it sits after
+        the previous text, so backspacing would eat the wrong end."""
+        if self._live and self._live.active:
+            self._live.undo()
+        if self._lead_in != " " or not self.last_transcript:
+            print("[easytype] scratch that: focus has moved, left the earlier text alone")
+            return
+        self._inj.backspace(len(self._lead_in + self.last_transcript))
+        self.last_transcript = ""
+        self._last_window = ""
+        self._lead_in = ""
 
     def _hold_final(self, text: str) -> None:
         """Show the finished transcript in the box and pause so it can be read.

@@ -257,3 +257,22 @@ def test_undo_removes_the_lead_in_too():
     typist.feed("check the camera counts")
     typist.undo()
     assert inj.backspaces == [len(" Check the ")]
+
+
+def test_live_typing_applies_spoken_punctuation():
+    inj = FakeInjector()
+    typist = LiveTypist(inj)
+    typist.start()
+    typist.feed("three cameras comma two")
+    typist.feed("three cameras comma two readers")
+    # the boundary word "two" is withheld until a later pass confirms it
+    assert "".join(inj.typed) == "Three cameras, "
+
+
+def test_live_typing_leaves_command_words_alone_when_the_switch_is_off():
+    inj = FakeInjector()
+    typist = LiveTypist(inj, voice_commands=False)
+    typist.start()
+    typist.feed("three cameras comma two")
+    typist.feed("three cameras comma two readers")
+    assert "".join(inj.typed) == "Three cameras comma "

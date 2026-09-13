@@ -180,9 +180,18 @@ class SettingsWindow(QDialog):
             "two seconds behind your voice. Uses your main transcription model, "
             "ignoring the preview model above. Not available while AI cleanup is on."
         )
+        self.voice_commands = QCheckBox("Obey spoken commands")
+        self.voice_commands.setToolTip(
+            'Say "period", "comma", "question mark", "exclamation point", '
+            '"new line", "new paragraph", or "scratch that" and EasyType acts on '
+            "them instead of typing the words.\n\n"
+            "Turn this off in chat apps: a spoken line break presses Enter, which "
+            "sends the message."
+        )
         form.addRow(self.preview_enabled)
         form.addRow("Preview model", self.preview_model)
         form.addRow(self.inject_live)
+        form.addRow(self.voice_commands)
         return w
 
     def _dictionary_tab(self):
@@ -263,6 +272,7 @@ class SettingsWindow(QDialog):
         self.preview_enabled.setChecked(c.preview_enabled)
         self.preview_model.setCurrentText(c.preview_model)
         self.inject_live.setChecked(c.inject_live)
+        self.voice_commands.setChecked(c.voice_commands)
         self.keyboard_device.setText(c.keyboard_device)
         self.history_enabled.setChecked(c.history_enabled)
         self.start_on_login.setChecked(autostart.is_enabled())
@@ -295,6 +305,7 @@ class SettingsWindow(QDialog):
             "preview_enabled": self.preview_enabled.isChecked(),
             "preview_model": self.preview_model.currentText(),
             "inject_live": self.inject_live.isChecked(),
+            "voice_commands": self.voice_commands.isChecked(),
             "keyboard_device": self.keyboard_device.text(),
             "pause_media_while_recording": self.pause_media.isChecked(),
             "history_enabled": self.history_enabled.isChecked(),

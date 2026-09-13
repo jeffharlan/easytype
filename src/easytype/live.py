@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from easytype.commands import apply_commands
 from easytype.config import DictEntry
 from easytype.dictionary import apply_dictionary
 from easytype.polish import polish_stream
@@ -43,9 +44,11 @@ class LiveTypist:
     began. Append-only while recording — the only backspaces are undo() and the
     single reconciliation in finish(), both focus-guarded."""
 
-    def __init__(self, injector, dictionary: Sequence[DictEntry] = ()):
+    def __init__(self, injector, dictionary: Sequence[DictEntry] = (),
+                 voice_commands: bool = True):
         self._inj = injector
         self._dict = list(dictionary)
+        self._commands = voice_commands
         self._window = ""
         self._lead_in = ""
         self._previous = ""
@@ -68,7 +71,10 @@ class LiveTypist:
         self._previous = raw
         if not settled or not self._focused():
             return
-        processed = self._lead_in + polish_stream(apply_dictionary(settled, self._dict))
+        swapped = apply_dictionary(settled, self._dict)
+        if self._commands:
+            swapped = apply_commands(swapped)
+        processed = self._lead_in + polish_stream(swapped)
         chunk = pending_chunk(processed, self._typed)
         if chunk:
             self._inj.type_text(chunk, LIVE_TYPE_DELAY_MS)
