@@ -24,8 +24,11 @@ class FakeTranscriber:
 
 
 class FakeInjector:
-    def __init__(self): self.injected = []
+    def __init__(self, window="win-1"):
+        self.window = window
+        self.injected = []
     def inject(self, text, method): self.injected.append((text, method))
+    def active_window(self): return self.window
 
 
 class FakeIndicator:
@@ -238,8 +241,9 @@ class FakeLive:
         self.active = active
         self.finished = None
 
-    def start(self):
+    def start(self, lead_in=""):
         self.events.append("start")
+        self.lead_in = lead_in
 
     def finish(self, text):
         self.events.append("finish")
@@ -362,3 +366,40 @@ def test_no_hold_when_there_is_no_box(tmp_path):
     ctrl.on_record()
     ctrl.on_record()
     assert inj.injected == [("Ops plus is ready.", "type")]
+
+
+def test_second_dictation_in_the_same_window_leads_with_a_space(tmp_path):
+    ctrl, inj = build(tmp_path)
+    ctrl.on_record(); ctrl.on_record()
+    ctrl.on_record(); ctrl.on_record()
+    assert [t for t, _ in inj.injected] == [
+        "Ops plus is ready.", " Ops plus is ready."
+    ]
+
+
+def test_dictation_into_a_different_window_has_no_lead_in(tmp_path):
+    ctrl, inj = build(tmp_path)
+    ctrl.on_record(); ctrl.on_record()
+    inj.window = "win-2"
+    ctrl.on_record(); ctrl.on_record()
+    assert inj.injected[1][0] == "Ops plus is ready."
+
+
+def test_lead_in_is_kept_out_of_history_and_repaste(tmp_path, history_file):
+    ctrl, inj = build(tmp_path)
+    ctrl.on_record(); ctrl.on_record()
+    ctrl.on_record(); ctrl.on_record()
+    assert [e.text for e in history.read(history_file)] == [
+        "Ops plus is ready.", "Ops plus is ready."
+    ]
+    assert ctrl.last_transcript == "Ops plus is ready."
+
+
+def test_live_typist_is_told_the_lead_in(tmp_path):
+    live = FakeLive(active=True)
+    ctrl, _ = _build_with_live(tmp_path, live)
+    ctrl.on_record(); ctrl.on_record()
+    ctrl.on_record()
+    assert live.lead_in == " "
+    ctrl.on_record()
+    assert live.finished == " Ops plus is ready."
