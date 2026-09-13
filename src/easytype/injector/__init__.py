@@ -16,6 +16,13 @@ class NullInjector:
     def inject(self, text: str, method: str) -> None:
         print(f"[easytype] Wayland injection not implemented yet — would have typed: {text!r}")
 
+    def active_window(self) -> str:
+        return ""
+
+    def type_text(self, text: str, delay_ms: int | None = None) -> None: ...
+
+    def backspace(self, count: int) -> None: ...
+
 
 def get_injector(session: str, type_delay_ms: int = 40) -> Injector:
     if session == "wayland":
