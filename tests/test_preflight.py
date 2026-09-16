@@ -1,4 +1,4 @@
-from easytype.preflight import Issue, blocks_run, detect_session, gather_issues, format_report
+from easytype.preflight import Issue, binaries_for, detect_session, gather_issues, format_report
 
 
 def test_detect_session_x11(monkeypatch):
@@ -51,21 +51,47 @@ def test_missing_binary_reported():
     assert "apt install" in x.fix
 
 
-def test_blocks_run_on_wayland_grab_mode():
-    # A real (non-passive) run would try to type through the unimplemented
-    # Wayland injector, so it must refuse up front rather than crash later.
-    assert blocks_run("wayland", passive=False) is True
+def test_binaries_for_x11():
+    assert binaries_for("x11") == ("xdotool", "xclip", "notify-send")
 
 
-def test_does_not_block_wayland_passive_mode():
-    # --passive never really injects, so it can still exercise recording +
-    # transcription on Wayland per the README.
-    assert blocks_run("wayland", passive=True) is False
+def test_binaries_for_wayland():
+    assert binaries_for("wayland") == ("ydotool", "wl-copy", "wl-paste", "notify-send")
 
 
-def test_does_not_block_x11_either_mode():
-    assert blocks_run("x11", passive=False) is False
-    assert blocks_run("x11", passive=True) is False
+def test_binaries_for_unknown_session_falls_back_to_x11():
+    assert binaries_for("unknown") == binaries_for("x11")
+
+
+def test_wayland_issues_include_ydotoold_check():
+    issues = gather_issues(
+        groups=["input"], uinput_writable=True,
+        binaries={"ydotool": True, "wl-copy": True, "wl-paste": True, "notify-send": True},
+        tk_ok=True, session="wayland", ydotoold_running=False,
+    )
+    d = next(i for i in issues if i.name == "ydotoold running")
+    assert not d.ok
+    assert "systemctl --user enable --now ydotool" in d.fix
+
+
+def test_x11_issues_have_no_ydotoold_check():
+    issues = gather_issues(
+        groups=["input"], uinput_writable=True,
+        binaries={"xdotool": True, "xclip": True, "notify-send": True}, tk_ok=True,
+    )
+    assert not any(i.name == "ydotoold running" for i in issues)
+
+
+def test_wayland_binary_fix_uses_correct_apt_packages():
+    issues = gather_issues(
+        groups=["input"], uinput_writable=True,
+        binaries={"ydotool": False, "wl-copy": False, "wl-paste": False, "notify-send": False},
+        tk_ok=True, session="wayland", ydotoold_running=True,
+    )
+    wl_copy = next(i for i in issues if i.name == "wl-copy")
+    assert "wl-clipboard" in wl_copy.fix
+    notify = next(i for i in issues if i.name == "notify-send")
+    assert "libnotify-bin" in notify.fix
 
 
 def test_format_report_marks_pass_and_fail():

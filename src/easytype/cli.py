@@ -25,7 +25,7 @@ def _raise_keyboard_interrupt(signum, frame):
 
 
 def cmd_check() -> int:
-    issues = preflight.check()
+    issues = preflight.check(preflight.detect_session())
     print(preflight.format_report(issues))
     blocking = [i for i in issues if not i.ok and not i.name.startswith("python3-tk")]
     return 1 if blocking else 0
@@ -73,15 +73,7 @@ def cmd_run(passive: bool) -> int:
     config = load_config()
     session = preflight.detect_session()
 
-    if preflight.blocks_run(session, passive):
-        print(
-            "EasyType Phase 1 supports X11 only — Wayland text injection isn't "
-            "implemented yet.\nSee the README (Troubleshooting) for status.\n"
-            "Use --passive to test recording and transcription without injection."
-        )
-        return 1
-
-    issues = preflight.check()
+    issues = preflight.check(session)
     blocking = [i for i in issues if not i.ok and not i.name.startswith("python3-tk")]
     grab = not passive
     if blocking and not passive:
