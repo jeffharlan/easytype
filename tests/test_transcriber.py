@@ -1,5 +1,7 @@
+import sys
 import threading
 import time
+import types
 
 import numpy as np
 
@@ -49,7 +51,12 @@ def test_transcribe_uses_greedy_decoding():
 
 def test_ensure_model_uses_higher_cpu_thread_count(monkeypatch):
     """CTranslate2's cpu_threads default doesn't use all available cores;
-    set it explicitly so CPU-only machines transcribe faster."""
+    set it explicitly so CPU-only machines transcribe faster.
+
+    faster_whisper isn't a CI dependency (it's part of the heavy audio/GPU
+    stack the suite deliberately excludes), so fake the module rather than
+    import the real thing.
+    """
     calls = []
 
     class _FakeWhisperModel:
@@ -59,8 +66,8 @@ def test_ensure_model_uses_higher_cpu_thread_count(monkeypatch):
                 compute_type=compute_type, cpu_threads=cpu_threads,
             ))
 
-    import faster_whisper
-    monkeypatch.setattr(faster_whisper, "WhisperModel", _FakeWhisperModel)
+    fake_module = types.SimpleNamespace(WhisperModel=_FakeWhisperModel)
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
 
     tx = Transcriber(device="cpu")
     tx._ensure_model()
