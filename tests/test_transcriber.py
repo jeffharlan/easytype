@@ -1,9 +1,11 @@
+import sys
 import threading
 import time
+import types
 
 import numpy as np
 
-from easytype.transcriber import Transcriber, resolve_compute_type
+from easytype.transcriber import CPU_THREADS, Transcriber, resolve_compute_type
 
 
 class _FakeSegment:
@@ -34,6 +36,43 @@ def test_no_initial_prompt_passes_none():
     tx._model = fake
     tx.transcribe(np.ones(16000, dtype=np.float32))
     assert fake.calls[0]["initial_prompt"] is None
+
+
+def test_transcribe_uses_greedy_decoding():
+    """beam_size=1 (greedy) instead of beam search — beam search is the
+    biggest single cost in CPU transcription time for a small accuracy gain
+    that doesn't matter much for short dictation utterances."""
+    fake = _FakeModel()
+    tx = Transcriber()
+    tx._model = fake
+    tx.transcribe(np.ones(16000, dtype=np.float32))
+    assert fake.calls[0]["beam_size"] == 1
+
+
+def test_ensure_model_uses_higher_cpu_thread_count(monkeypatch):
+    """CTranslate2's cpu_threads default doesn't use all available cores;
+    set it explicitly so CPU-only machines transcribe faster.
+
+    faster_whisper isn't a CI dependency (it's part of the heavy audio/GPU
+    stack the suite deliberately excludes), so fake the module rather than
+    import the real thing.
+    """
+    calls = []
+
+    class _FakeWhisperModel:
+        def __init__(self, model_size_or_path, device, compute_type, cpu_threads):
+            calls.append(dict(
+                model_size_or_path=model_size_or_path, device=device,
+                compute_type=compute_type, cpu_threads=cpu_threads,
+            ))
+
+    fake_module = types.SimpleNamespace(WhisperModel=_FakeWhisperModel)
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
+
+    tx = Transcriber(device="cpu")
+    tx._ensure_model()
+
+    assert calls[0]["cpu_threads"] == CPU_THREADS
 
 
 def test_concurrent_transcribes_never_overlap():
