@@ -4,6 +4,13 @@ import threading
 
 import numpy as np
 
+# CTranslate2's cpu_threads default is conservative and leaves most cores idle
+# on modern multi-core machines. Beam search (beam_size=5) is the biggest single
+# cost in CPU transcription time; greedy decoding (beam_size=1) is a lot faster
+# for a small accuracy cost that doesn't matter much on short dictation audio.
+CPU_THREADS = 8
+BEAM_SIZE = 1
+
 
 def resolve_compute_type(device: str) -> str:
     return {"cpu": "int8", "cuda": "float16"}.get(device, "default")
@@ -26,6 +33,7 @@ class Transcriber:
             self._model = WhisperModel(
                 self._model_name, device=self._device,
                 compute_type=resolve_compute_type(self._device),
+                cpu_threads=CPU_THREADS,
             )
         return self._model
 
@@ -43,7 +51,7 @@ class Transcriber:
         with self._lock:
             model = self._ensure_model()
             segments, _info = model.transcribe(
-                audio, language=self._language, beam_size=5,
+                audio, language=self._language, beam_size=BEAM_SIZE,
                 initial_prompt=self._initial_prompt or None,
             )
             return "".join(seg.text for seg in segments).strip()
