@@ -21,7 +21,7 @@ _STYLE = Path(__file__).with_name("style.qss")
 
 _STATUS_LABELS = {
     "recording": "Recording…", "transcribing": "Transcribing…",
-    "idle": "Idle", "stopped": "Stopped", "disabled": "Disabled (Wayland)",
+    "idle": "Idle", "stopped": "Stopped",
 }
 
 
@@ -61,20 +61,11 @@ class TrayApp:
         self._active_icon = make_icon(True)
         self._settings_window = None
 
-        session = preflight.detect_session()
-        self._wayland = session == "wayland"
+        self._session = preflight.detect_session()
         grab = self._decide_grab()
-        self._passive = not self._wayland and not grab
-        self._sup = EngineSupervisor(session=session, grab=grab)
-
-        if self._wayland:
-            QMessageBox.warning(
-                None, "EasyType",
-                "EasyType dictation needs an X11 session; Wayland isn't supported yet.\n"
-                "You can still edit Settings, but dictation won't run.",
-            )
-        else:
-            self._sup.start()
+        self._passive = not grab
+        self._sup = EngineSupervisor(session=self._session, grab=grab)
+        self._sup.start()
 
         self._mode = str(load_config().capture_mode)
 
@@ -88,7 +79,7 @@ class TrayApp:
         self._refresh()
 
     def _decide_grab(self) -> bool:
-        issues = preflight.check()
+        issues = preflight.check(self._session)
         blocking = [i for i in issues if not i.ok and not i.name.startswith("python3-tk")]
         return not blocking
 
@@ -142,8 +133,7 @@ class TrayApp:
         doc["capture_mode"] = self._mode
         save_doc(doc)
         self._update_mode_label()
-        if not self._wayland:
-            self._sup.reload()
+        self._sup.reload()
 
     def _open_settings(self):
         from easytype.gui.settings import SettingsWindow
@@ -183,7 +173,7 @@ class TrayApp:
         self._update_mode_label()
 
     def _refresh(self):
-        state = "disabled" if self._wayland else self._sup.state
+        state = self._sup.state
         label = _STATUS_LABELS.get(state, state)
         self._status_action.setText(label)
         active = state in ("recording", "transcribing")

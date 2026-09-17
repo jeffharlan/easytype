@@ -2,13 +2,13 @@
 
 [![tests](https://github.com/jeffharlan/easytype/actions/workflows/tests.yml/badge.svg)](https://github.com/jeffharlan/easytype/actions/workflows/tests.yml)
 
-EasyType is a system-wide, local push-to-talk and toggle voice dictation tool for Linux. Press a hotkey, speak, and the transcribed text is inserted at the cursor in whatever app is currently focused — a terminal, a browser text field, a chat window, anything. Transcription runs entirely on your own machine via [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so there is no API bill and your audio never leaves the box. EasyType runs on X11 today; Wayland support is planned. Released under the MIT License.
+EasyType is a system-wide, local push-to-talk and toggle voice dictation tool for Linux. Press a hotkey, speak, and the transcribed text is inserted at the cursor in whatever app is currently focused — a terminal, a browser text field, a chat window, anything. Transcription runs entirely on your own machine via [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so there is no API bill and your audio never leaves the box. EasyType runs on both X11 and Wayland (including Hyprland). Released under the MIT License.
 
 ![EasyType Settings — every option in one window](docs/images/settings.png)
 
 ## How it works
 
-EasyType runs a background listener that grabs your keyboard device via evdev. When you press the hotkey, it starts recording from the microphone. In toggle mode, press the hotkey again to stop; in hold mode, release it. The recording is passed to faster-whisper for local transcription. Optional dictionary substitutions are applied (e.g., replace a misheard name), and an optional LLM formatter can clean up punctuation or phrasing. The finished text is injected at the cursor using `xdotool type` or `xdotool key ctrl+v` (paste mode).
+EasyType runs a background listener that grabs your keyboard device via evdev. When you press the hotkey, it starts recording from the microphone. In toggle mode, press the hotkey again to stop; in hold mode, release it. The recording is passed to faster-whisper for local transcription. Optional dictionary substitutions are applied (e.g., replace a misheard name), and an optional LLM formatter can clean up punctuation or phrasing. The finished text is injected at the cursor via `xdotool type`/`xdotool key ctrl+v` on X11, or `ydotool type`/`ydotool key` plus `wl-clipboard` on Wayland (paste mode uses the clipboard either way).
 
 Because EasyType uses evdev grab-and-replay — it grabs the keyboard at the device level and synthesises a new virtual device for normal key events — the hotkey chord is fully consumed before the focused application ever sees it. Combos like Ctrl+Space (which normally toggles IBus) and Ctrl+\\ (which sends SIGQUIT in terminals) do not fire their usual side effects.
 
@@ -17,9 +17,27 @@ Because EasyType uses evdev grab-and-replay — it grabs the keyboard at the dev
 - Python 3.11+
 - System packages:
 
+**X11:**
+
 ```bash
 sudo apt install xdotool xclip libnotify-bin portaudio19-dev python3-tk
 ```
+
+**Wayland (including Hyprland):**
+
+```bash
+sudo apt install ydotool wl-clipboard libnotify-bin portaudio19-dev python3-tk
+```
+
+On Arch/Omarchy: `sudo pacman -S ydotool wl-clipboard libnotify portaudio tk`.
+
+Wayland injection goes through [ydotool](https://github.com/ReimuNotMoe/ydotool), which needs its daemon running:
+
+```bash
+systemctl --user enable --now ydotool
+```
+
+`ydotoold` needs the same `/dev/uinput` access as EasyType's own keyboard grab — see [Permissions setup](#permissions-setup) below; the ydotool package installs a udev rule for this itself, so on Arch/Omarchy a `sudo udevadm control --reload-rules && sudo udevadm trigger` after adding yourself to `input` is normally all that's needed. Active-window detection (used for the terminal-paste heuristic and "typing as you speak") uses `hyprctl` and is Hyprland-specific; on other Wayland compositors it degrades gracefully (dictation and injection still work, just without window-tracking niceties).
 
 The tray + Settings GUI (`easytype-gui`) additionally needs **`libxcb-cursor0`** — a runtime requirement of Qt 6.5+ that PySide6 does not bundle (without it the GUI exits immediately):
 
@@ -29,7 +47,7 @@ sudo apt install libxcb-cursor0
 
 `python3-tk` is optional. It powers the small on-screen recording-timer pill. If it is missing, EasyType falls back to desktop notifications.
 
-Wayland support (ydotool, wl-clipboard) is planned. On a Wayland session, use `--passive` mode.
+Run `easytype --check` any time to see exactly what's missing for your session (X11 or Wayland) and the precise commands to fix it.
 
 ## Install
 
@@ -48,7 +66,7 @@ Both methods expose the `easytype` command on your PATH.
 
 ## Permissions setup
 
-The grab-and-replay consume feature requires two things:
+The grab-and-replay consume feature — and, on Wayland, the `ydotoold` daemon behind text injection — requires two things:
 
 1. Your user must be in the `input` group.
 2. Your user must have write access to `/dev/uinput`.
@@ -327,7 +345,7 @@ The test suite is hermetic — no microphone, GPU, or GUI toolkit required.
 echo $XDG_SESSION_TYPE
 ```
 
-EasyType supports X11. On a Wayland session, text injection is not implemented yet — use `easytype --passive` to test transcription. Wayland support is planned.
+EasyType supports both X11 and Wayland. On Wayland, injection goes through `ydotool`, which needs `ydotoold` running (`systemctl --user enable --now ydotool`) and the same `/dev/uinput` access as the keyboard grab. `easytype --check` reports exactly what's missing, including whether `ydotoold` is reachable.
 
 **Stuck keyboard:** The evdev grab is always released on exit, whether that is a clean shutdown, a crash, or Ctrl+C / SIGTERM. If grab prerequisites are missing at startup, EasyType falls back to passive mode automatically rather than holding the grab in a broken state.
 

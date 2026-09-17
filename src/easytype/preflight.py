@@ -5,7 +5,8 @@ import os
 import shutil
 from dataclasses import dataclass
 
-REQUIRED_BINARIES = ("xdotool", "xclip", "notify-send")
+REQUIRED_BINARIES_X11 = ("xdotool", "xclip", "notify-send")
+REQUIRED_BINARIES_WAYLAND = ("ydotool", "wl-copy", "wl-paste", "notify-send")
 
 
 @dataclass(frozen=True)
@@ -15,12 +16,8 @@ class Issue:
     fix: str
 
 
-def blocks_run(session: str, passive: bool) -> bool:
-    """A real (grab) run on Wayland would try to type through the injector once
-    transcription finishes, and Wayland injection isn't implemented in Phase 1 —
-    so it must refuse up front. --passive never injects for real, so it can
-    still run on Wayland to exercise recording and transcription."""
-    return session == "wayland" and not passive
+def binaries_for(session: str) -> tuple[str, ...]:
+    return REQUIRED_BINARIES_WAYLAND if session == "wayland" else REQUIRED_BINARIES_X11
 
 
 def detect_session() -> str:
@@ -31,7 +28,18 @@ def detect_session() -> str:
     return "unknown"
 
 
-def gather_issues(*, groups, uinput_writable, binaries, tk_ok) -> list[Issue]:
+# Debian/Ubuntu package that provides each binary, where it differs from the
+# binary's own name (notify-send ships in libnotify-bin; wl-copy and wl-paste
+# both ship in wl-clipboard).
+_APT_PACKAGE = {
+    "notify-send": "libnotify-bin",
+    "wl-copy": "wl-clipboard",
+    "wl-paste": "wl-clipboard",
+}
+
+
+def gather_issues(*, groups, uinput_writable, binaries, tk_ok, session: str = "x11",
+                  ydotoold_running: bool = True) -> list[Issue]:
     issues: list[Issue] = []
     issues.append(Issue(
         "input group", "input" in groups,
@@ -46,10 +54,17 @@ def gather_issues(*, groups, uinput_writable, binaries, tk_ok) -> list[Issue]:
         "    sudo modprobe uinput\n"
         "    sudo udevadm control --reload-rules && sudo udevadm trigger",
     ))
-    for name in REQUIRED_BINARIES:
+    for name in binaries_for(session):
+        pkg = _APT_PACKAGE.get(name, name)
         issues.append(Issue(
             name, binaries.get(name, False),
-            f"Install {name}:\n    sudo apt install {name}",
+            f"Install {name}:\n    sudo apt install {pkg}",
+        ))
+    if session == "wayland":
+        issues.append(Issue(
+            "ydotoold running", ydotoold_running,
+            "Start the ydotool daemon (needed for ydotool to type/click at all):\n"
+            "    systemctl --user enable --now ydotool",
         ))
     issues.append(Issue(
         "python3-tk (recording indicator)", tk_ok,
@@ -80,12 +95,21 @@ def _tk_available() -> bool:
         return False
 
 
-def check() -> list[Issue]:
+def _ydotoold_running() -> bool:
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    socket_path = os.environ.get("YDOTOOL_SOCKET", f"{runtime_dir}/.ydotool_socket")
+    return os.path.exists(socket_path)
+
+
+def check(session: str | None = None) -> list[Issue]:
+    session = session if session is not None else detect_session()
     return gather_issues(
         groups=_current_groups(),
         uinput_writable=_uinput_writable(),
-        binaries={b: shutil.which(b) is not None for b in REQUIRED_BINARIES},
+        binaries={b: shutil.which(b) is not None for b in binaries_for(session)},
         tk_ok=_tk_available(),
+        session=session,
+        ydotoold_running=_ydotoold_running(),
     )
 
 

@@ -4,6 +4,11 @@ Local voice-dictation tool: a PySide6 tray app + Settings GUI. Public OSS at
 `github.com/jeffharlan/easytype`. Whisper transcribes, then text flows through
 dictionary replacements → optional AI cleanup → deterministic polish → injection.
 
+Runs on both X11 and Wayland (incl. Hyprland). `injector/get_injector(session)`
+picks `X11Injector` (xdotool/xclip) or `WaylandInjector` (ydotool/wl-clipboard,
+active-window via `hyprctl`); `preflight.py` is session-aware for which binaries
+and daemons (`ydotoold`) it checks for.
+
 ## How we ship changes
 
 Every change — feature or fix — follows this flow. Do NOT commit straight to `main`.
