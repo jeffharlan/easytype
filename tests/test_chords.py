@@ -1,6 +1,7 @@
 from easytype.chords import HotkeyEngine, trigger_key, ChordCollector
 
 KEY_LEFTCTRL, KEY_SPACE, KEY_ESC, KEY_F8, KEY_BACKSLASH, KEY_A, KEY_RIGHTCTRL = 29, 57, 1, 66, 43, 30, 97
+KEY_LEFTALT, KEY_RIGHTALT = 56, 100
 
 
 def test_trigger_is_non_modifier():
@@ -84,6 +85,33 @@ def test_modifier_key_itself_is_forwarded():
     eng = make_engine()
     enabled = {"record", "cancel", "repaste"}
     assert eng.feed(KEY_RIGHTCTRL, 1, enabled).swallow is False
+
+
+def test_lone_right_alt_hotkey_fires_on_right_alt():
+    eng = HotkeyEngine({"record": (KEY_RIGHTALT,)})
+    o = eng.feed(KEY_RIGHTALT, 1, {"record"})
+    assert o.swallow is True and o.pressed == "record"
+
+
+def test_lone_right_alt_hotkey_ignores_left_alt():
+    eng = HotkeyEngine({"record": (KEY_RIGHTALT,)})
+    o = eng.feed(KEY_LEFTALT, 1, {"record"})
+    assert o.swallow is False and o.pressed is None
+    assert eng.feed(KEY_LEFTALT, 0, {"record"}).released is None
+
+
+def test_lone_left_alt_hotkey_ignores_right_alt():
+    eng = HotkeyEngine({"record": (KEY_LEFTALT,)})
+    o = eng.feed(KEY_RIGHTALT, 1, {"record"})
+    assert o.swallow is False and o.pressed is None
+
+
+def test_lone_modifier_hotkey_hold_release_only_on_same_key():
+    eng = HotkeyEngine({"record": (KEY_RIGHTALT,)})
+    eng.feed(KEY_RIGHTALT, 1, {"record"})
+    eng.feed(KEY_LEFTALT, 1, {"record"})       # left alt pressed while right held
+    assert eng.feed(KEY_LEFTALT, 0, {"record"}).released is None
+    assert eng.feed(KEY_RIGHTALT, 0, {"record"}).released == "record"
 
 
 def test_chord_collector_single_key():
