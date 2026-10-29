@@ -6,8 +6,9 @@ from dataclasses import dataclass
 MODIFIERS = frozenset({29, 97, 56, 100, 42, 54, 125, 126})
 # 29=LCTRL 97=RCTRL 56=LALT 100=RALT 42=LSHIFT 54=RSHIFT 125=LMETA 126=RMETA
 
-# Left/right variants of a modifier are interchangeable: pressing either Ctrl
-# satisfies a hotkey that names Ctrl. Map each right-variant to its left canonical.
+# Left/right variants of a modifier are interchangeable when held with a trigger:
+# pressing either Ctrl satisfies a Ctrl+Space hotkey. Map each right-variant to its
+# left canonical. (Not applied to the trigger key itself.)
 _CANON = {97: 29, 100: 56, 54: 42, 126: 125}
 
 
@@ -29,7 +30,8 @@ class KeyOutcome:
 
 class HotkeyEngine:
     """Pure consume/match engine. Feed raw key events; get swallow + fire decisions.
-    Left/right modifier variants are treated as equivalent when matching."""
+    Left/right variants of a modifier held alongside the trigger are treated as
+    equivalent; the trigger key itself must match exactly."""
 
     def __init__(self, chords: dict[str, tuple[int, ...]]):
         self._chords = {name: tuple(keys) for name, keys in chords.items()}
@@ -47,7 +49,9 @@ class HotkeyEngine:
         for name in self._chords:
             if name not in enabled:
                 continue
-            if _canon(self._triggers[name]) != _canon(code):
+            # The trigger must match exactly: when the trigger is itself a
+            # modifier (a lone Right Alt hotkey), Left Alt must not fire it.
+            if self._triggers[name] != code:
                 continue
             if self._mods[name] <= held_canon:
                 return name
